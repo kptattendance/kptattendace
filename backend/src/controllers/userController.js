@@ -135,6 +135,7 @@ export const getUserById = async (req, res) => {
 };
 
 // UPDATE user
+// UPDATE user
 export const updateUser = async (req, res) => {
   try {
     const { role: clerkRole, id: requesterId } = req.user;
@@ -179,6 +180,15 @@ export const updateUser = async (req, res) => {
       updateData.imagePublicId = req.cloudinaryResult.public_id;
     }
 
+    // 🔥 Update Clerk metadata too
+    await clerkClient.users.updateUser(targetUser.clerkId, {
+      publicMetadata: {
+        role: updateData.role || targetUser.role,
+        department: updateData.department || targetUser.department,
+      },
+    });
+
+    // Update Mongo
     const user = await User.findByIdAndUpdate(targetUser._id, updateData, {
       new: true,
     });
@@ -189,6 +199,7 @@ export const updateUser = async (req, res) => {
       data: user,
     });
   } catch (err) {
+    console.error("UpdateUser Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

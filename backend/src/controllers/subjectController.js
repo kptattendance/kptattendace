@@ -3,7 +3,7 @@ import Subject from "../models/Subject.js";
 // ✅ Create Subject
 export const createSubject = async (req, res) => {
   try {
-    const { code, name, semester } = req.body;
+    const { code, name, semester, departments } = req.body;
 
     const existing = await Subject.findOne({ code });
     if (existing) {
@@ -12,23 +12,27 @@ export const createSubject = async (req, res) => {
         .json({ success: false, message: "Subject code already exists" });
     }
 
-    const subject = await Subject.create({ code, name, semester });
-    res
-      .status(201)
-      .json({
-        success: true,
-        data: subject,
-        message: "✅ Subject created successfully",
-      });
+    const subject = await Subject.create({ code, name, semester, departments });
+    res.status(201).json({
+      success: true,
+      data: subject,
+      message: "✅ Subject created successfully",
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ✅ Get all Subjects
+// ✅ Get all Subjects (with optional department filter)
 export const getSubjects = async (req, res) => {
   try {
-    const subjects = await Subject.find().sort({ semester: 1, code: 1 });
+    const { department } = req.query;
+    let filter = {};
+    if (department) {
+      filter.departments = department.toUpperCase();
+    }
+
+    const subjects = await Subject.find(filter).sort({ semester: 1, code: 1 });
     res.json({ success: true, data: subjects });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -54,11 +58,11 @@ export const getSubjectById = async (req, res) => {
 export const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { code, name, semester } = req.body;
+    const { code, name, semester, departments } = req.body;
 
     const subject = await Subject.findByIdAndUpdate(
       id,
-      { code, name, semester },
+      { code, name, semester, departments },
       { new: true, runValidators: true }
     );
 

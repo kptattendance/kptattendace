@@ -20,6 +20,14 @@ const subjectSchema = new mongoose.Schema(
       min: 1,
       max: 8, // assuming 8 semesters
     },
+    departments: [
+      {
+        type: String, // e.g. "CSE", "ECE", "ME"
+        required: true,
+        trim: true,
+        uppercase: true,
+      },
+    ],
   },
   { timestamps: true }
 );
