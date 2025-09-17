@@ -16,6 +16,9 @@ import connectDB from "./src/config/db.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import studentRoutes from "./src/routes/studentRoutes.js";
 import subjectRoutes from "./src/routes/subjectRoutes.js";
+import attendanceSessionRoutes from "./src/routes/attendanceSessionRoutes.js";
+import attendanceRecordRoutes from "./src/routes/attendanceRecordRoutes.js";
+import attendanceReportRoutes from "./src/routes/attendanceReportRoutes.js";
 
 dotenv.config();
 
@@ -58,7 +61,9 @@ app.use((err, req, res, next) => {
 app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/subjects", subjectRoutes);
-
+app.use("/api/attendance/sessions", attendanceSessionRoutes);
+app.use("/api/attendance/records", attendanceRecordRoutes);
+app.use("/api/attendance/reports", attendanceReportRoutes);
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
