@@ -19,7 +19,7 @@ import subjectRoutes from "./src/routes/subjectRoutes.js";
 import attendanceSessionRoutes from "./src/routes/attendanceSessionRoutes.js";
 import attendanceRecordRoutes from "./src/routes/attendanceRecordRoutes.js";
 import attendanceReportRoutes from "./src/routes/attendanceReportRoutes.js";
-
+import statisticsRoutes from "./src/routes/statisticsRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -64,6 +64,7 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/attendance/sessions", attendanceSessionRoutes);
 app.use("/api/attendance/records", attendanceRecordRoutes);
 app.use("/api/attendance/reports", attendanceReportRoutes);
+app.use("/api/statistics", statisticsRoutes);
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);

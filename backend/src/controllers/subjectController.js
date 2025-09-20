@@ -24,12 +24,19 @@ export const createSubject = async (req, res) => {
 };
 
 // ✅ Get all Subjects (with optional department filter)
+// ✅ Get all Subjects (with optional department + semester filter)
 export const getSubjects = async (req, res) => {
   try {
-    const { department } = req.query;
+    const { department, semester } = req.query;
     let filter = {};
+
     if (department) {
+      // match department inside departments array
       filter.departments = department.toUpperCase();
+    }
+
+    if (semester) {
+      filter.semester = Number(semester); // ensure numeric comparison
     }
 
     const subjects = await Subject.find(filter).sort({ semester: 1, code: 1 });

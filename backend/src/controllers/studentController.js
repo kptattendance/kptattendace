@@ -1,9 +1,9 @@
-// src/controllers/studentController.js
 import Student from "../models/Student.js";
 import cloudinary from "../config/cloudinary.js";
 import { clerkClient } from "@clerk/express";
+import mongoose from "mongoose";
+import AttendanceRecord from "../models/AttendanceRecord.js";
 
-// CREATE student
 // CREATE student
 export const createStudent = async (req, res) => {
   try {
@@ -31,18 +31,19 @@ export const createStudent = async (req, res) => {
       }
     }
 
-    // ✅ Clerk account with role + department
+    // ✅ Create Clerk account
     const clerkUser = await clerkClient.users.createUser({
       emailAddress: [email],
       firstName: name,
       publicMetadata: {
         role: "student",
-        department, // 👈 add department here
+        department,
       },
     });
 
-    // Save MongoDB doc
+    // Save MongoDB doc with clerkId
     const student = new Student({
+      clerkId: clerkUser.id,
       registerNumber,
       name,
       email,
@@ -50,7 +51,6 @@ export const createStudent = async (req, res) => {
       department,
       semester,
       role: "student",
-      clerkId: clerkUser.id,
       imageUrl: req.cloudinaryResult?.secure_url,
       imagePublicId: req.cloudinaryResult?.public_id,
     });
@@ -79,7 +79,7 @@ export const getStudents = async (req, res) => {
     let students;
     if (role === "admin") {
       students = await Student.find().sort({ createdAt: -1 });
-    } else if (role === "hod") {
+    } else if (role === "hod" || role === "staff") {
       if (department === "sc") {
         students = await Student.find().sort({ createdAt: -1 }); // science HOD sees all
       } else {
@@ -123,6 +123,7 @@ export const updateStudent = async (req, res) => {
         message: "Cannot edit student outside your department",
       });
     }
+
     if (role === "hod" && department === "sc") {
       return res.status(403).json({
         success: false,
@@ -204,11 +205,25 @@ export const deleteStudent = async (req, res) => {
   }
 };
 
-// GET student by ID
+// GET student by ID (can resolve Clerk ID too)
 export const getStudentById = async (req, res) => {
   try {
     const { role, department } = req.user;
-    const student = await Student.findById(req.params.id);
+
+    let studentId = req.params.id;
+
+    // ✅ Resolve clerkId → _id if needed
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      const student = await Student.findOne({ clerkId: studentId });
+      if (!student) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Student not found" });
+      }
+      studentId = student._id;
+    }
+
+    const student = await Student.findById(studentId);
 
     if (!student) {
       return res
@@ -216,7 +231,6 @@ export const getStudentById = async (req, res) => {
         .json({ success: false, message: "Student not found" });
     }
 
-    // ✅ Role-based access checks
     if (
       role === "hod" &&
       department !== "sc" &&
@@ -240,6 +254,101 @@ export const getStudentById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: err.message || "Failed to fetch student details.",
+    });
+  }
+};
+
+// SEARCH students
+export const searchStudents = async (req, res) => {
+  try {
+    const { department, semester, registerNumber } = req.query;
+    const filter = {};
+    if (department) filter.department = department.toLowerCase();
+    if (semester) filter.semester = Number(semester);
+    if (registerNumber) filter.registerNumber = registerNumber;
+
+    const students = await Student.find(filter).select(
+      "name registerNumber department semester _id clerkId"
+    );
+    res.json(students);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "❌ Failed to search students", error: err.message });
+  }
+};
+
+// ✅ Get Student Attendance History
+export const getStudentAttendanceHistory = async (req, res) => {
+  try {
+    let { studentId, subjectId, startDate, endDate } = req.query;
+
+    if (!studentId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "studentId is required" });
+    }
+
+    // ✅ Resolve studentId (MongoId or ClerkId)
+    let mongoId = studentId;
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      const student = await Student.findOne({ clerkId: studentId });
+      if (!student) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Student not found" });
+      }
+      mongoId = student._id;
+    }
+
+    const filter = { studentId: mongoId };
+
+    const sessionFilter = {};
+    if (subjectId && mongoose.Types.ObjectId.isValid(subjectId)) {
+      sessionFilter.subjectId = subjectId;
+    }
+    if (startDate && endDate) {
+      sessionFilter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    // ✅ Query Attendance Records
+    const records = await AttendanceRecord.find(filter)
+      .populate({
+        path: "sessionId",
+        match: sessionFilter, // apply subject/date filter here
+        populate: { path: "subjectId", select: "name code semester" },
+      })
+      .populate("studentId", "name registerNumber");
+
+    const history = records
+      .filter((r) => r.sessionId) // ignore filtered-out sessions
+      .map((r) => {
+        const subj = r.sessionId.subjectId;
+        return {
+          date: r.sessionId.date,
+          subject: subj?.name || "Unknown",
+          code: subj?.code || "",
+          timeSlot: r.sessionId.timeSlot,
+          hours: r.hours || 0,
+          status: r.hours > 0 ? "Present" : "Absent",
+        };
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return res.json({
+      success: true,
+      studentId: mongoId,
+      history,
+    });
+  } catch (err) {
+    console.error("getStudentAttendanceHistory Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "❌ Failed to fetch student history",
+      error: err.message,
     });
   }
 };

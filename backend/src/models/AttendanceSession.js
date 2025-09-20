@@ -16,7 +16,9 @@ const attendanceSessionSchema = new mongoose.Schema(
     }, // who taught
     semester: { type: Number, required: true },
     department: { type: String, required: true }, // e.g., "cs"
+    duration: { type: Number, required: true, default: 1 },
   },
+
   { timestamps: true }
 );
 

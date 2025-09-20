@@ -1,23 +1,29 @@
 import AttendanceSession from "../models/AttendanceSession.js";
 import AttendanceRecord from "../models/AttendanceRecord.js";
 import Student from "../models/Student.js";
+import mongoose from "mongoose";
+import User from "../models/User.js";
 
-// ✅ Create a new attendance session
 export const createSession = async (req, res) => {
   try {
     const { date, timeSlot, subjectId, lecturerId, semester, department } =
       req.body;
 
-    // Prevent duplicate session (same date, slot, subject, semester, department, lecturer)
+    // 🔑 Find the corresponding User in DB using Clerk ID
+    const staff = await User.findOne({ clerkId: lecturerId });
+    if (!staff) {
+      return res.status(400).json({ message: "Lecturer not found in system" });
+    }
+
+    // Prevent duplicate session
     const exists = await AttendanceSession.findOne({
       date,
       timeSlot,
       subjectId,
       semester,
       department,
-      lecturerId,
+      lecturerId: staff._id, // ✅ real ObjectId
     });
-
     if (exists) {
       return res
         .status(400)
@@ -25,16 +31,17 @@ export const createSession = async (req, res) => {
     }
 
     const session = await AttendanceSession.create({
-      date,
+      date: new Date(date),
       timeSlot,
       subjectId,
-      lecturerId,
+      lecturerId: staff._id, // ✅ ObjectId
       semester,
       department,
     });
 
     res.status(201).json({ message: "✅ Session created", data: session });
   } catch (err) {
+    console.error("Create Session Error:", err);
     res
       .status(500)
       .json({ message: "❌ Failed to create session", error: err.message });
@@ -86,23 +93,87 @@ export const getSessionById = async (req, res) => {
   }
 };
 
-// ✅ Update session (e.g., wrong subject/time corrected)
+
+
+// UPDATE session (safe)
 export const updateSession = async (req, res) => {
   try {
-    const updated = await AttendanceSession.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ message: "Session not found" });
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid session id" });
+    }
 
-    res.json({ message: "✅ Session updated", data: updated });
+    // clone request body so we can normalize/validate before saving
+    const updateData = { ...req.body };
+
+    // 1) If lecturerId provided, accept either:
+    //    - Clerk id like "user_xxx" (map to User._id)
+    //    - Mongo ObjectId string (use directly)
+    if (updateData.lecturerId) {
+      const incoming = String(updateData.lecturerId).trim();
+
+      // Clerk id pattern (adjust if your clerk ids differ)
+      if (incoming.startsWith("user_")) {
+        const staff = await User.findOne({ clerkId: incoming });
+        if (!staff) {
+          return res.status(400).json({ message: "Lecturer (Clerk id) not found in DB" });
+        }
+        updateData.lecturerId = staff._id; // ObjectId
+      } else if (mongoose.isValidObjectId(incoming)) {
+        // OK - already a Mongo id
+        updateData.lecturerId = mongoose.Types.ObjectId(incoming);
+      } else {
+        return res.status(400).json({ message: "Invalid lecturerId format" });
+      }
+    }
+
+    // 2) Normalize date if supplied (convert YYYY-MM-DD or string to Date)
+    if (updateData.date) {
+      const d = new Date(updateData.date);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      updateData.date = d;
+    }
+
+    // 3) Normalize semester -> Number
+    if (updateData.semester !== undefined) {
+      const num = Number(updateData.semester);
+      if (Number.isNaN(num)) {
+        return res.status(400).json({ message: "Invalid semester value" });
+      }
+      updateData.semester = num;
+    }
+
+    // 4) If subjectId present, ensure it looks like an ObjectId (optional but helpful)
+    if (updateData.subjectId && !mongoose.isValidObjectId(updateData.subjectId)) {
+      return res.status(400).json({ message: "Invalid subjectId" });
+    }
+
+    // Finally update (run validators)
+    const updated = await AttendanceSession.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+      context: "query",
+    })
+      .populate("subjectId", "code name")
+      .populate("lecturerId", "name email department");
+
+    if (!updated) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    return res.json({ message: "✅ Session updated", data: updated });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "❌ Failed to update session", error: err.message });
+    console.error("Update Session Error:", err); // important for debugging
+    // If it's a CastError (invalid ObjectId) provide clearer feedback
+    if (err.name === "CastError") {
+      return res.status(400).json({ message: "Invalid value for a field", error: err.message });
+    }
+    return res.status(500).json({ message: "❌ Failed to update session", error: err.message });
   }
 };
+
 
 // ✅ Delete session (cascade delete attendance records)
 export const deleteSession = async (req, res) => {

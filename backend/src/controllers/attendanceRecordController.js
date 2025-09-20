@@ -1,16 +1,31 @@
 import AttendanceRecord from "../models/AttendanceRecord.js";
-import Student from "../models/Student.js";
+import AttendanceSession from "../models/AttendanceSession.js";
 
 // ✅ Mark attendance for a session
 export const markAttendance = async (req, res) => {
   try {
     const { sessionId, records } = req.body;
-    // records = [{ studentId, status }, ...]
+
+    const session = await AttendanceSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ message: "❌ Session not found" });
+    }
+
+    // Calculate hours for this session
+    const [start, end] = session.timeSlot.split("-");
+    const sd = new Date(`2000-01-01T${start}:00`);
+    const ed = new Date(`2000-01-01T${end}:00`);
+    const duration = (ed - sd) / (1000 * 60 * 60);
 
     const bulkOps = records.map((r) => ({
       updateOne: {
         filter: { sessionId, studentId: r.studentId },
-        update: { $set: { status: r.status } },
+        update: {
+          $set: {
+            status: r.status,
+            hours: r.status === "present" ? duration : 0,
+          },
+        },
         upsert: true,
       },
     }));
@@ -34,12 +49,10 @@ export const getStudentAttendance = async (req, res) => {
     );
     res.json({ data: records });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "❌ Failed to fetch student attendance",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "❌ Failed to fetch student attendance",
+      error: err.message,
+    });
   }
 };
 
@@ -52,12 +65,10 @@ export const getSessionAttendance = async (req, res) => {
     );
     res.json({ data: records });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "❌ Failed to fetch session attendance",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "❌ Failed to fetch session attendance",
+      error: err.message,
+    });
   }
 };
 
@@ -66,9 +77,19 @@ export const updateAttendance = async (req, res) => {
   try {
     const { sessionId, studentId, status } = req.body;
 
+    const session = await AttendanceSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ message: "❌ Session not found" });
+    }
+
+    const [start, end] = session.timeSlot.split("-");
+    const sd = new Date(`2000-01-01T${start}:00`);
+    const ed = new Date(`2000-01-01T${end}:00`);
+    const duration = (ed - sd) / (1000 * 60 * 60);
+
     const record = await AttendanceRecord.findOneAndUpdate(
       { sessionId, studentId },
-      { status },
+      { status, hours: status === "present" ? duration : 0 },
       { new: true, upsert: true }
     );
 

@@ -5,6 +5,8 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  searchStudents,
+  getStudentAttendanceHistory,
 } from "../controllers/studentController.js";
 
 import { authenticateUser } from "../middlewares/authMiddleware.js";
@@ -29,5 +31,7 @@ router.put("/updatestudent/:id", uploadSingleImage, updateStudent);
 
 // Delete student
 router.delete("/deletestudent/:id", deleteStudent);
+router.get("/search", searchStudents);
+router.get("/student-history", getStudentAttendanceHistory);
 
 export default router;

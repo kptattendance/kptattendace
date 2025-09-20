@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
   {
+    clerkId: { type: String, required: true, unique: true }, // ← add this
     registerNumber: {
       type: String,
       required: true,

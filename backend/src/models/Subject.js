@@ -22,7 +22,7 @@ const subjectSchema = new mongoose.Schema(
     },
     departments: [
       {
-        type: String, // e.g. "CSE", "ECE", "ME"
+        type: String, // e.g. "cs", "ec", "me"
         required: true,
         trim: true,
         uppercase: true,
