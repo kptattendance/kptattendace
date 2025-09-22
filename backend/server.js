@@ -38,13 +38,8 @@ app.use(morgan("dev"));
 // clerk middleware
 app.use(clerkMiddleware());
 
-// health check route
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
-});
-
 app.get("/", (req, res) => {
-  res.send("🚀 API server is running", { time: new Date().toISOString() });
+  res.send("🚀 API server is running");
 });
 
 // example protected route
