@@ -163,15 +163,16 @@ export default function AttendanceSessionForm({ onCreated }) {
   };
 
   const departments = [
-    { value: "cs", label: "Computer Science" },
-    { value: "ce", label: "Civil" },
-    { value: "me", label: "Mechanical" },
-    { value: "ec", label: "ECE" },
-    { value: "eee", label: "EEE" },
-    { value: "ch", label: "Chemical" },
-    { value: "po", label: "Polymer" },
-    { value: "at", label: "Automobile" },
-    { value: "sc", label: "Science & English" },
+    { value: "all", label: "All Departments" },
+    { value: "at", label: "Automobile Engineering" },
+    { value: "ch", label: "Chemical Engineering" },
+    { value: "ce", label: "Civil Engineering" },
+    { value: "cs", label: "Computer Science Engineering" },
+    { value: "ec", label: "Electronics & Communication Engineering" },
+    { value: "eee", label: "Electrical & Electronics Engineering" },
+    { value: "me", label: "Mechanical Engineering" },
+    { value: "po", label: "Polymer Engineering" },
+    { value: "sc", label: "Science and English" },
   ];
 
   // Generate times 09:00 - 17:00 (store 24h, show 12h)
