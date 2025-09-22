@@ -43,6 +43,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
 });
 
+app.get("/", (req, res) => {
+  res.send("🚀 API server is running", { time: new Date().toISOString() });
+});
+
 // example protected route
 app.get("/protected", requireAuth(), async (req, res) => {
   const { userId } = getAuth(req);
