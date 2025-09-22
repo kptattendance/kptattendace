@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
   {
-    clerkId: { type: String, required: true, unique: true }, // ← add this
+    clerkId: { type: String, required: true, unique: true }, // Clerk user mapping
     registerNumber: {
       type: String,
       required: true,
@@ -16,7 +16,10 @@ const studentSchema = new mongoose.Schema(
     semester: { type: String, required: true },
     role: { type: String, default: "student" },
 
-    // Cloudinary image
+    // 🔹 New Batch field
+    batch: { type: String, required: true }, // e.g., B1, B2
+
+    // (keeping image fields optional in case you add later)
     imageUrl: { type: String },
     imagePublicId: { type: String },
   },

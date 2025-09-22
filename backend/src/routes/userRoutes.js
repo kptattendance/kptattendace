@@ -5,6 +5,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
+  syncUser,
 } from "../controllers/userController.js";
 import { uploadSingleImage } from "../middlewares/uploadImage.js";
 import { authenticateUser } from "../middlewares/authMiddleware.js";
@@ -17,5 +18,7 @@ router.get("/getusers", authenticateUser, getUsers);
 router.get("/getuser/:id", authenticateUser, getUserById);
 router.put("/updateuser/:id", authenticateUser, uploadSingleImage, updateUser);
 router.delete("/deleteuser/:id", authenticateUser, deleteUser);
+
+router.post("/syncuser", authenticateUser, syncUser);
 
 export default router;

@@ -1,2 +1,64 @@
+
+# -----------------
+# Node.js / Backend
+# -----------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
 .env
-node_modules
+.env.*
+
+
+# -----------------
+# Frontend (Next.js / React)
+# -----------------
+# dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend.pnp.*
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# production build
+frontend/build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# vercel
+frontend/.vercel
+
+# TypeScript
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+
+# -----------------
+# General
+# -----------------
+# OS files
+Thumbs.db
+*.swp
+*.swo
+
+# IDE/editor
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project

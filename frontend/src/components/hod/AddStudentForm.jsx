@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Upload, Image as ImageIcon } from "lucide-react";
 import LoaderOverlay from "../LoaderOverlay";
 import StudentTable from "./StudentTable";
+import BulkUpload from "./bulkupload/BulkUpload";
 
 const departments = [
   { value: "cs", label: "Computer Science Engineering" },
@@ -133,124 +134,130 @@ export default function StudentForm() {
           ⚠️ Science & English HOD cannot add students.
         </p>
       ) : (
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4 bg-white p-6 rounded-lg shadow"
-        >
-          <input
-            name="registerNumber"
-            value={form.registerNumber}
-            onChange={handleChange}
-            placeholder="Register Number"
-            required
-            className="block w-full rounded-md border px-3 py-2"
-          />
-
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Full name"
-            required
-            className="block w-full rounded-md border px-3 py-2"
-          />
-
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Email"
-            required
-            className="block w-full rounded-md border px-3 py-2"
-          />
-
-          <input
-            name="phone"
-            type="tel"
-            value={form.phone}
-            onChange={handleChange}
-            placeholder="Phone"
-            required
-            className="block w-full rounded-md border px-3 py-2"
-          />
-
-          {/* Department field */}
-          {role === "hod" ? (
+        <>
+          <BulkUpload />
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 bg-white p-6 mt-14 rounded-lg shadow"
+          >
+            <h3 className="text-2xl font-semibold mb-4 text-blue-600">
+              Add Individual Student
+            </h3>
             <input
-              value={
-                departments.find((d) => d.value === hodDepartment)?.label ||
-                hodDepartment
-              }
-              disabled
-              className="block w-full rounded-md border px-3 py-2 bg-gray-100 text-gray-600"
+              name="registerNumber"
+              value={form.registerNumber}
+              onChange={handleChange}
+              placeholder="Register Number"
+              required
+              className="block w-full rounded-md border px-3 py-2"
             />
-          ) : (
+
+            <input
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Full name"
+              required
+              className="block w-full rounded-md border px-3 py-2"
+            />
+
+            <input
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Email"
+              required
+              className="block w-full rounded-md border px-3 py-2"
+            />
+
+            <input
+              name="phone"
+              type="tel"
+              value={form.phone}
+              onChange={handleChange}
+              placeholder="Phone"
+              required
+              className="block w-full rounded-md border px-3 py-2"
+            />
+
+            {/* Department field */}
+            {role === "hod" ? (
+              <input
+                value={
+                  departments.find((d) => d.value === hodDepartment)?.label ||
+                  hodDepartment
+                }
+                disabled
+                className="block w-full rounded-md border px-3 py-2 bg-gray-100 text-gray-600"
+              />
+            ) : (
+              <select
+                name="department"
+                value={form.department}
+                onChange={handleChange}
+                required
+                className="block w-full rounded-md border px-3 py-2"
+              >
+                <option value="">Select a department</option>
+                {departments.map((dept) => (
+                  <option key={dept.value} value={dept.value}>
+                    {dept.label}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Semester field */}
             <select
-              name="department"
-              value={form.department}
+              name="semester"
+              value={form.semester}
               onChange={handleChange}
               required
               className="block w-full rounded-md border px-3 py-2"
             >
-              <option value="">Select a department</option>
-              {departments.map((dept) => (
-                <option key={dept.value} value={dept.value}>
-                  {dept.label}
+              <option value="">Select a semester</option>
+              {semesters.map((sem) => (
+                <option key={sem.value} value={sem.value}>
+                  {sem.label}
                 </option>
               ))}
             </select>
-          )}
 
-          {/* Semester field */}
-          <select
-            name="semester"
-            value={form.semester}
-            onChange={handleChange}
-            required
-            className="block w-full rounded-md border px-3 py-2"
-          >
-            <option value="">Select a semester</option>
-            {semesters.map((sem) => (
-              <option key={sem.value} value={sem.value}>
-                {sem.label}
-              </option>
-            ))}
-          </select>
+            {/* Profile Image */}
+            <div className="flex items-center gap-4">
+              {form.image ? (
+                <img
+                  src={URL.createObjectURL(form.image)}
+                  alt="Preview"
+                  className="w-16 h-16 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 border">
+                  <ImageIcon className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+              <label className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg border cursor-pointer hover:bg-blue-100 transition">
+                <Upload className="w-5 h-5 inline-block mr-2" />
+                Upload
+                <input
+                  type="file"
+                  name="image"
+                  accept="image/*"
+                  onChange={handleChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
 
-          {/* Profile Image */}
-          <div className="flex items-center gap-4">
-            {form.image ? (
-              <img
-                src={URL.createObjectURL(form.image)}
-                alt="Preview"
-                className="w-16 h-16 rounded-full object-cover border"
-              />
-            ) : (
-              <div className="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 border">
-                <ImageIcon className="w-6 h-6 text-gray-400" />
-              </div>
-            )}
-            <label className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg border cursor-pointer hover:bg-blue-100 transition">
-              <Upload className="w-5 h-5 inline-block mr-2" />
-              Upload
-              <input
-                type="file"
-                name="image"
-                accept="image/*"
-                onChange={handleChange}
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            Add Student
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Add Student
+            </button>
+          </form>
+        </>
       )}
     </section>
   );

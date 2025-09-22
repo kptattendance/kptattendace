@@ -24,6 +24,8 @@ export default function AttendanceSessionForm({ onCreated }) {
     subjectId: "",
     semester: "",
     department: "",
+    batch: "", // ✅ new
+
     room: "",
     notes: "",
   });
@@ -114,13 +116,14 @@ export default function AttendanceSessionForm({ onCreated }) {
         subjectId: form.subjectId,
         semester: Number(form.semester),
         department: form.department,
+        batch: form.batch,
         room: form.room,
         notes: form.notes,
         lecturerId: user?.id,
         duration, // ✅ number of hours
       };
 
-      console.log(payload);
+      console.log("this is payload", payload);
 
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/attendance/sessions`,
@@ -133,6 +136,7 @@ export default function AttendanceSessionForm({ onCreated }) {
       });
 
       const session = res.data.data || res.data;
+      console.log(session);
 
       // ✅ Redirect to take attendance
       router.push(`/attendance/take/${session._id}`);
@@ -144,6 +148,7 @@ export default function AttendanceSessionForm({ onCreated }) {
         subjectId: "",
         semester: "",
         department: myRole === "hod" ? myDept : "",
+        batch: "",
         room: "",
         notes: "",
       });
@@ -292,6 +297,19 @@ export default function AttendanceSessionForm({ onCreated }) {
             </option>
           ))}
         </select>
+        {/* Batch */}
+        <select
+          name="batch"
+          value={form.batch}
+          onChange={handleChange}
+          required
+          className="border px-2 py-1 rounded"
+        >
+          <option value="">Select Batch</option>
+          <option value="b1">B1</option>
+          <option value="b2">B2</option>
+          <option value="both">Both B1 & B2</option>
+        </select>
 
         {/* Room */}
         <input
@@ -321,7 +339,6 @@ export default function AttendanceSessionForm({ onCreated }) {
           </button>
         </div>
       </form>
-      {/* <AttendanceSessionTable /> */}
     </section>
   );
 }

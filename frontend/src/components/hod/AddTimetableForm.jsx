@@ -34,7 +34,10 @@ export default function AddTimetableForm() {
 
   return (
     <section>
-      <h2 className="text-2xl font-semibold mb-4">Manage Timetable.....</h2>
+      <FilledTimetable />
+      <h2 className="text-2xl font-semibold mb-4">
+        Add Department Timetable.....
+      </h2>
 
       <form
         onSubmit={handleSave}
@@ -132,8 +135,6 @@ export default function AddTimetableForm() {
           )}
         </div>
       </form>
-
-      <FilledTimetable />
     </section>
   );
 }

@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import StudentStats from "./StudentStats";
 
-export default function HodStudentStats() {
+export default function EachStudentAttendance() {
   const { getToken } = useAuth();
   const [filters, setFilters] = useState({
     department: "",
@@ -39,8 +39,8 @@ export default function HodStudentStats() {
 
   return (
     <section>
-      <h2 className="text-2xl font-semibold mb-4">
-        🎓 HOD — Student Attendance Stats
+      <h2 className="text-2xl font-semibold p-2 mb-4">
+        🎓 Student Attendance Report
       </h2>
 
       <form
@@ -48,7 +48,7 @@ export default function HodStudentStats() {
           e.preventDefault();
           searchStudent();
         }}
-        className="flex flex-wrap gap-4 mb-6"
+        className="flex flex-wrap gap-4 mb-6 pl-2"
       >
         <select
           value={filters.department}

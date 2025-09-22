@@ -7,6 +7,7 @@ import {
   deleteStudent,
   searchStudents,
   getStudentAttendanceHistory,
+  bulkAddStudents,
 } from "../controllers/studentController.js";
 
 import { authenticateUser } from "../middlewares/authMiddleware.js";
@@ -34,4 +35,5 @@ router.delete("/deletestudent/:id", deleteStudent);
 router.get("/search", searchStudents);
 router.get("/student-history", getStudentAttendanceHistory);
 
+router.post("/bulk-add", bulkAddStudents);
 export default router;

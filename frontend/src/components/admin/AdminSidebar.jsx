@@ -3,7 +3,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { BarChart3, UserPlus, FileText, Settings } from "lucide-react";
+import {
+  BarChart3,
+  UserPlus,
+  Users,
+  ClipboardList,
+  BookOpen,
+  FileText,
+  Settings,
+  UserCheck,
+  CalendarDays,
+  Clock,
+} from "lucide-react";
 
 export default function AdminSidebar({ selected, setSelected }) {
   const { getToken } = useAuth();
@@ -31,10 +42,20 @@ export default function AdminSidebar({ selected, setSelected }) {
   }, [user, getToken]);
 
   const menuItems = [
-    { id: "stats", label: "Department Stats", icon: BarChart3 },
-    { id: "add-hod", label: "Add a Member", icon: UserPlus },
-    { id: "reports", label: "View Reports", icon: FileText },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "stats", label: "Department Stats", icon: CalendarDays }, // Stats/chart icon
+    {
+      id: "consolidated-attendance",
+      label: "Consolidated Dept Attendance",
+      icon: FileText,
+    }, // Reports
+    { id: "reports", label: "Student Report", icon: FileText }, // Reports
+    { id: "add-hod", label: "Add a Member", icon: UserPlus }, // Adding a member
+    { id: "hod-list", label: "HOD List", icon: UserCheck }, // HODs
+    { id: "staff-list", label: "Staffs List", icon: Users }, // Multiple staff
+    { id: "student-list", label: "Students List", icon: ClipboardList }, // Student roster
+    { id: "subject-list", label: "Subject List", icon: BookOpen }, // Subjects/books
+
+    { id: "settings", label: "Settings", icon: Settings }, // Settings
   ];
 
   return (
@@ -46,14 +67,14 @@ export default function AdminSidebar({ selected, setSelected }) {
             👋 Welcome to Admin Page
           </p>
           <img
-            src={adminInfo.imageUrl || "/default-avatar.png"}
+            src="./logo.jpg"
             alt={adminInfo.name || "Admin"}
             className="w-20 h-20 rounded-full mx-auto object-cover"
           />
           <h2 className="mt-2 text-lg font-semibold">
             {adminInfo.name || "Admin"}
           </h2>
-          <p className="text-sm text-gray-500">{adminInfo.phone}</p>
+          {/* <p className="text-sm text-gray-500">{adminInfo.phone}</p> */}
           <p className="text-sm text-gray-500 break-words">{adminInfo.email}</p>
         </div>
       ) : (

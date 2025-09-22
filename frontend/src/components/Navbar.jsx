@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  SignOutButton,
-  SignedIn,
-  SignedOut,
-  SignInButton,
-} from "@clerk/nextjs";
-import { LogIn, LogOut } from "lucide-react"; // modern icons
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 export default function Navbar() {
   return (
@@ -20,24 +14,26 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Right side (auth buttons) */}
-        <div>
+        {/* Right side (auth buttons / avatar) */}
+        <div className="flex items-center gap-4">
           <SignedOut>
             <SignInButton>
               <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition">
-                <LogIn size={18} />
-                <span>Login</span>
+                Login
               </button>
             </SignInButton>
           </SignedOut>
 
           <SignedIn>
-            <SignOutButton>
-              <button className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition">
-                <LogOut size={18} />
-                <span>Logout</span>
-              </button>
-            </SignOutButton>
+            {/* User avatar with dropdown menu */}
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: "w-10 h-10", // size of avatar
+                },
+              }}
+              afterSignOutUrl="/" // redirect after logout
+            />
           </SignedIn>
         </div>
       </div>

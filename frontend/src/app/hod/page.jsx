@@ -3,13 +3,15 @@
 import React, { useState } from "react";
 import Navbar from "@/components/Navbar";
 import HodSidebar from "@/components/hod/HodSidebar";
-import DepartmentStats from "@/components/hod/DepartmentStats";
 import AddStaffForm from "@/components/hod/AddStaffForm";
 import AddStudentForm from "@/components/hod/AddStudentForm";
 import AddSubjectForm from "@/components/hod/AddSubjectForm";
 import AddTimetableForm from "@/components/hod/AddTimetableForm";
 import StudentTable from "@/components/hod/StudentTable";
 import AttendanceSessionForm from "@/components/attendance/AttendanceSessionForm";
+import ConsolidatedAttendance from "@/components/hod/ConsolidatedAttendance";
+import EachStudentAttendance from "@/components/hod/statistics/EachStudentAttendance";
+import ClassesHandled from "@/components/hod/ClassesHandled";
 
 export default function HODDashboardPage() {
   const [selected, setSelected] = useState("mark-attendance");
@@ -36,7 +38,12 @@ export default function HODDashboardPage() {
               onChange={(e) => setSelected(e.target.value)}
             >
               <option value="mark-attendance">Mark Attendance</option>
-              <option value="stats">Department Stats</option>
+              <option value="consolidated-attendance">
+                Consolidated Attendance
+              </option>
+              <option value="each-student-attendance">
+                Each Student Attendance
+              </option>
               <option value="add-staff">Add Staff</option>
               <option value="add-student">Add Students</option>
               <option value="list-student">Students List</option>
@@ -48,7 +55,11 @@ export default function HODDashboardPage() {
 
           {/* Content area */}
           {selected === "mark-attendance" && <AttendanceSessionForm />}
-          {selected === "stats" && <DepartmentStats dept={hodDepartment} />}
+          {selected === "consolidated-attendance" && (
+            <ConsolidatedAttendance dept={hodDepartment} />
+          )}
+          {selected === "each-student-attendance" && <EachStudentAttendance />}
+          {selected === "classes-handled" && <ClassesHandled />}
           {selected === "add-staff" && <AddStaffForm />}
           {selected === "add-student" && <AddStudentForm />}
           {selected === "list-student" && <StudentTable />}

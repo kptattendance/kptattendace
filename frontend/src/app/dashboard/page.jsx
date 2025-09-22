@@ -1,12 +1,13 @@
 "use client";
-
-import { useUser } from "@clerk/nextjs";
+import axios from "axios";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth(); // 👈 get Clerk JWT
   const router = useRouter();
 
   useEffect(() => {
@@ -17,11 +18,32 @@ export default function Dashboard() {
       return;
     }
 
+    // Wrap async logic in a function
+    const syncUser = async () => {
+      try {
+        const token = await getToken();
+        const res = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users/syncuser`,
+          {}, // no body needed
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        console.log("✅ Synced user:", res.data);
+      } catch (err) {
+        console.error("❌ Sync error:", err.response?.data || err.message);
+      }
+    };
+
+    syncUser();
+
+    // Role check
     const role = user.publicMetadata?.role?.toLowerCase();
 
     if (!role) {
       toast.error("❌ You are not permitted to access this page.");
-      router.replace("/unauthorized"); // optional redirect to home
+      router.replace("/unauthorized");
       return;
     }
 
@@ -43,12 +65,11 @@ export default function Dashboard() {
         break;
       default:
         toast.error("❌ You are not permitted to access this page.", {
-          duration: 4000, // 👈 4 seconds
+          duration: 4000,
         });
-
         router.replace("/unauthorized");
     }
-  }, [isLoaded, user, router]);
+  }, [isLoaded, user, router, getToken]);
 
   return (
     <div className="p-6">

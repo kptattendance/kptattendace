@@ -41,12 +41,27 @@ export default function TakeAttendancePage() {
             params: { department, semester },
           }
         );
+        console.log(studentsRes.data.data);
+        const allStudents = studentsRes.data.data || [];
 
-        const studentList = (studentsRes.data.data || []).filter(
-          (st) =>
-            st.department?.toLowerCase() === department?.toLowerCase() &&
-            String(st.semester) === String(semester)
-        );
+        // Filter by batch
+        let studentList;
+        if (sessionRes.data.session.batch === "both") {
+          // Batch = Both → include all students
+          studentList = allStudents.filter(
+            (st) =>
+              st.department?.toLowerCase() === department?.toLowerCase() &&
+              String(st.semester) === String(semester)
+          );
+        } else {
+          // Batch = b1 or b2
+          studentList = allStudents.filter(
+            (st) =>
+              st.department?.toLowerCase() === department?.toLowerCase() &&
+              String(st.semester) === String(semester) &&
+              st.batch === sessionRes.data.session.batch
+          );
+        }
 
         setStudents(studentList);
 

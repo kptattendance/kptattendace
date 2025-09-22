@@ -4,6 +4,15 @@ import AttendanceRecord from "../models/AttendanceRecord.js";
 import Student from "../models/Student.js";
 import Subject from "../models/Subject.js";
 
+// Helper: normalize batch
+function normalizeBatch(batch) {
+  if (!batch) return "Unknown";
+  if (batch.toLowerCase() === "b1") return "B1";
+  if (batch.toLowerCase() === "b2") return "B2";
+  if (batch.toLowerCase() === "both") return "Both";
+  return batch;
+}
+
 // 🔹 Staff: Subject-wise detailed attendance (all students)
 export const getSubjectWiseAttendanceDetails = async (req, res) => {
   try {
@@ -29,18 +38,18 @@ export const getSubjectWiseAttendanceDetails = async (req, res) => {
 
     const sessionIds = sessions.map((s) => s._id);
 
-    // 2️⃣ Students in dept + sem
+    // 2️⃣ Students in dept + sem (include batch)
     const students = await Student.find({
       department: department.toLowerCase(),
       semester: Number(semester),
-    }).select("_id name registerNumber");
+    }).select("_id name registerNumber batch");
 
     // 3️⃣ Attendance records for these sessions
     const records = await AttendanceRecord.find({
       sessionId: { $in: sessionIds },
     })
-      .populate("studentId", "name registerNumber")
-      .populate("sessionId", "date timeSlot");
+      .populate("studentId", "name phone registerNumber")
+      .populate("sessionId", "date batch timeSlot duration");
 
     // 4️⃣ Build student → session history
     const studentMap = {};
@@ -49,6 +58,7 @@ export const getSubjectWiseAttendanceDetails = async (req, res) => {
         _id: st._id,
         name: st.name,
         registerNumber: st.registerNumber,
+        batch: normalizeBatch(st.batch), // ✅ batch included here
         sessions: [], // { date, timeSlot, status }
       };
     });
@@ -65,6 +75,8 @@ export const getSubjectWiseAttendanceDetails = async (req, res) => {
           date: s.date,
           timeSlot: s.timeSlot,
           status: rec && rec.hours > 0 ? "Present" : "Absent",
+          duration: rec?.hours || s.duration || 1,
+          batch: normalizeBatch(s.batch), // ✅ also attach batch for clarity
         });
       });
     });
@@ -95,7 +107,9 @@ export const getMySubjectAttendanceDetails = async (req, res) => {
         .json({ success: false, message: "subjectId is required" });
     }
 
-    const student = await Student.findOne({ clerkId: studentClerkId });
+    const student = await Student.findOne({ clerkId: studentClerkId }).select(
+      "_id name registerNumber batch department semester"
+    );
     if (!student) {
       return res
         .status(404)
@@ -113,7 +127,7 @@ export const getMySubjectAttendanceDetails = async (req, res) => {
     const records = await AttendanceRecord.find({
       sessionId: { $in: sessionIds },
       studentId,
-    }).populate("sessionId", "date timeSlot");
+    }).populate("sessionId", "date batch timeSlot duration");
 
     const history = sessions.map((s) => {
       const rec = records.find(
@@ -123,11 +137,18 @@ export const getMySubjectAttendanceDetails = async (req, res) => {
         date: s.date,
         timeSlot: s.timeSlot,
         status: rec && rec.hours > 0 ? "Present" : "Absent",
-        duration: rec?.hours || 0,
+        duration: rec?.hours || s.duration || 1,
+        batch: normalizeBatch(student.batch), // ✅ include student's batch
       };
     });
 
-    res.json({ success: true, studentId, subjectId, sessions: history });
+    res.json({
+      success: true,
+      studentId,
+      subjectId,
+      batch: normalizeBatch(student.batch),
+      sessions: history,
+    });
   } catch (err) {
     console.error("getMySubjectAttendanceDetails Error:", err);
     res.status(500).json({
@@ -146,7 +167,9 @@ export const getMySubjects = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const student = await Student.findOne({ clerkId: req.user.id });
+    const student = await Student.findOne({ clerkId: req.user.id }).select(
+      "department semester batch"
+    );
     if (!student) {
       return res
         .status(404)
@@ -158,7 +181,11 @@ export const getMySubjects = async (req, res) => {
       semester: Number(student.semester),
     });
 
-    res.json({ success: true, subjects });
+    res.json({
+      success: true,
+      batch: normalizeBatch(student.batch), // ✅ return batch too
+      subjects,
+    });
   } catch (err) {
     console.error("getMySubjects Error:", err);
     res.status(500).json({

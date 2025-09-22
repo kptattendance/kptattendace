@@ -12,9 +12,15 @@ function getDuration(timeSlot) {
   const [start, end] = timeSlot.split("-");
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
-  const startMinutes = sh * 60 + sm;
-  const endMinutes = eh * 60 + em;
-  return (endMinutes - startMinutes) / 60;
+  return (eh * 60 + em - (sh * 60 + sm)) / 60;
+}
+
+function normalizeBatch(batch) {
+  if (!batch) return "Unknown";
+  if (batch === "B1" || batch === "b1") return "B1";
+  if (batch === "B2" || batch === "b2") return "B2";
+  if (batch === "Both" || batch === "both") return "Both";
+  return batch;
 }
 
 export default function SubjectStatistics() {
@@ -35,41 +41,78 @@ export default function SubjectStatistics() {
   const myRole = user?.publicMetadata?.role;
   const myDept = user?.publicMetadata?.department;
 
+  // 🔹 Collect all unique sessions across students
+  const allSessions = (() => {
+    if (report.length === 0) return [];
+    const seen = new Set();
+    const sessions = [];
+    report.forEach((stu) => {
+      stu.sessions.forEach((s) => {
+        const dateStr = new Date(s.date).toLocaleDateString("en-GB");
+        const key = `${dateStr}_${s.timeSlot}`; // ✅ ignore batch for uniqueness
+        if (!seen.has(key)) {
+          seen.add(key);
+          sessions.push({
+            date: dateStr,
+            timeSlot: s.timeSlot,
+            duration: getDuration(s.timeSlot),
+            batch: normalizeBatch(s.batch),
+          });
+        }
+      });
+    });
+    return sessions.sort((a, b) => {
+      const da = new Date(a.date.split("/").reverse().join("-"));
+      const db = new Date(b.date.split("/").reverse().join("-"));
+      if (da - db !== 0) return da - db;
+      return a.timeSlot.localeCompare(b.timeSlot);
+    });
+  })();
+
   const downloadExcel = () => {
     if (report.length === 0) {
       toast.error("No data to download");
       return;
     }
-    // Prepare data
+
     const data = report.map((stu) => {
       const row = {
         "Reg No": stu.registerNumber,
         Name: stu.name,
       };
 
-      allSessions.forEach((s) => {
-        const status = stu.sessions.find(
-          (ses) =>
-            new Date(ses.date).toLocaleDateString("en-GB") === s.date &&
-            ses.timeSlot === s.timeSlot
-        )?.status;
-        row[`${s.date} (${s.timeSlot})`] = `${s.duration}h ${
-          status === "Absent" ? "❌" : ""
-        }`;
+      const sessionMap = {};
+      stu.sessions.forEach((s) => {
+        const dateStr = new Date(s.date).toLocaleDateString("en-GB");
+        sessionMap[`${dateStr}_${s.timeSlot}`] = s.status;
       });
 
-      let totalHeld = allSessions.reduce((sum, s) => sum + s.duration, 0);
-      let totalAttended = 0;
+      // session status mapping
       allSessions.forEach((s) => {
-        const status = stu.sessions.find(
-          (ses) =>
-            new Date(ses.date).toLocaleDateString("en-GB") === s.date &&
-            ses.timeSlot === s.timeSlot
-        )?.status;
-        if (status === "Present") totalAttended += s.duration;
+        const status = sessionMap[`${s.date}_${s.timeSlot}`];
+        row[`${s.date} (${s.timeSlot})`] =
+          status === "Absent"
+            ? "❌"
+            : status === "Present"
+            ? `${s.duration}h`
+            : "-";
       });
-      row["Attended Hours"] = `${totalAttended}h`;
-      row["Overall %"] = `${Math.round((totalAttended / totalHeld) * 100)}%`;
+
+      // held/attended for this student
+      let held = 0,
+        attended = 0;
+      allSessions.forEach((s) => {
+        if (s.batch === "Both" || s.batch === normalizeBatch(stu.batch)) {
+          held += s.duration;
+          if (sessionMap[`${s.date}_${s.timeSlot}`] === "Present") {
+            attended += s.duration;
+          }
+        }
+      });
+
+      row["Attended Hours"] = attended;
+      row["Held Hours"] = held;
+      row["%"] = held > 0 ? Math.round((attended / held) * 100) : 0;
 
       return row;
     });
@@ -149,47 +192,16 @@ export default function SubjectStatistics() {
     }
   };
 
-  // 🔹 Collect all unique sessions across students
-  const allSessions = (() => {
-    if (report.length === 0) return [];
-    const seen = new Set();
-    const sessions = [];
-    report.forEach((stu) => {
-      stu.sessions.forEach((s) => {
-        const dateStr = new Date(s.date).toLocaleDateString("en-GB");
-        const key = `${dateStr}_${s.timeSlot}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          sessions.push({
-            date: dateStr,
-            timeSlot: s.timeSlot,
-            duration: getDuration(s.timeSlot),
-          });
-        }
-      });
-    });
-
-    // sort by date and time
-    sessions.sort((a, b) => {
-      const da = new Date(a.date.split("/").reverse().join("-"));
-      const db = new Date(b.date.split("/").reverse().join("-"));
-      if (da - db !== 0) return da - db;
-      return a.timeSlot.localeCompare(b.timeSlot);
-    });
-
-    return sessions;
-  })();
-
   const departments = [
-    { value: "cs", label: "Computer Science" },
-    { value: "ce", label: "Civil" },
-    { value: "me", label: "Mechanical" },
-    { value: "ec", label: "ECE" },
+    { value: "at", label: "AT" },
+    { value: "ce", label: "CE" },
+    { value: "ch", label: "CH" },
+    { value: "cs", label: "CS" },
+    { value: "ec", label: "EC" },
     { value: "eee", label: "EEE" },
-    { value: "ch", label: "Chemical" },
-    { value: "po", label: "Polymer" },
-    { value: "at", label: "Automobile" },
-    { value: "sc", label: "Science & English" },
+    { value: "me", label: "ME" },
+    { value: "po", label: "PO" },
+    { value: "sc", label: "SC" },
   ];
 
   return (
@@ -206,7 +218,6 @@ export default function SubjectStatistics() {
         }}
         className="flex flex-wrap gap-4 mb-6"
       >
-        {/* Department */}
         <select
           value={filters.department}
           onChange={(e) =>
@@ -222,20 +233,20 @@ export default function SubjectStatistics() {
             </option>
           ))}
         </select>
-        {/* Semester */}
+
         <select
           value={filters.semester}
           onChange={(e) => setFilters({ ...filters, semester: e.target.value })}
           className="border px-3 py-2 rounded-md"
         >
           <option value="">Select Semester</option>
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+          {[1, 2, 3, 4, 5, 6].map((s) => (
             <option key={s} value={s}>
               Semester {s}
             </option>
           ))}
         </select>
-        {/* Subjects */}
+
         <select
           value={filters.subjectId}
           onChange={(e) =>
@@ -259,16 +270,18 @@ export default function SubjectStatistics() {
             </option>
           ))}
         </select>
+
         <button
           type="submit"
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
         >
           {loading ? "Loading..." : "Fetch Report"}
-        </button>{" "}
+        </button>
+
         <button
           onClick={downloadExcel}
-          className="px-4 py-2 bg-green-600 text-white rounded-md "
+          className="px-4 py-2 bg-green-600 text-white rounded-md"
         >
           Download Excel
         </button>
@@ -292,11 +305,12 @@ export default function SubjectStatistics() {
                 {allSessions.map((s, idx) => (
                   <th key={idx} className="px-4 py-2 border text-center">
                     {s.date}
-                    <div className="text-xs text-gray-600">{s.duration}h</div>
+                    <div className="text-xs text-gray-600">
+                      {s.duration}h ({s.batch})
+                    </div>
                   </th>
                 ))}
-                <th className="px-4 py-2 border text-center">Attended Hours</th>
-                <th className="px-4 py-2 border text-center">%</th>
+                <th className="px-4 py-2 border text-center">Totals</th>
               </tr>
             </thead>
             <tbody>
@@ -307,15 +321,21 @@ export default function SubjectStatistics() {
                   sessionMap[`${dateStr}_${s.timeSlot}`] = s.status;
                 });
 
-                let totalHeld = 0;
-                let totalAttended = 0;
+                let held = 0,
+                  attended = 0;
                 allSessions.forEach((s) => {
-                  totalHeld += s.duration;
-                  if (sessionMap[`${s.date}_${s.timeSlot}`] === "Present") {
-                    totalAttended += s.duration;
+                  if (
+                    s.batch === "Both" ||
+                    s.batch === normalizeBatch(stu.batch)
+                  ) {
+                    held += s.duration;
+                    if (sessionMap[`${s.date}_${s.timeSlot}`] === "Present") {
+                      attended += s.duration;
+                    }
                   }
                 });
-                const percent = Math.round((totalAttended / totalHeld) * 100);
+                const percent =
+                  held > 0 ? Math.round((attended / held) * 100) : 0;
 
                 return (
                   <tr
@@ -326,7 +346,6 @@ export default function SubjectStatistics() {
                     <td className="px-4 py-2 border">{stu.registerNumber}</td>
                     <td className="px-4 py-2 border">{stu.name}</td>
 
-                    {/* Sessions */}
                     {allSessions.map((s, idx) => {
                       const status = sessionMap[`${s.date}_${s.timeSlot}`];
                       return (
@@ -349,10 +368,6 @@ export default function SubjectStatistics() {
                       );
                     })}
 
-                    {/* Totals */}
-                    <td className="px-4 py-2 border text-center font-semibold">
-                      {totalAttended}h
-                    </td>
                     <td
                       className={`px-4 py-2 border text-center font-semibold ${
                         percent < 75
@@ -360,7 +375,7 @@ export default function SubjectStatistics() {
                           : "text-green-700"
                       }`}
                     >
-                      {percent}%
+                      {attended}h / {held}h ({percent}%)
                     </td>
                   </tr>
                 );

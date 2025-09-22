@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2, Check, X, Upload } from "lucide-react";
 import LoaderOverlay from "../LoaderOverlay";
 
-export default function StudentTable() {
+export default function AdminStudentList() {
   const { getToken } = useAuth();
   const { user } = useUser();
 
@@ -28,15 +28,30 @@ export default function StudentTable() {
     phone: "",
     department: "",
     semester: "",
-    batch: "", // ✅ Added batch
+    batch: "",
   });
-  const [selectedImage, setSelectedImage] = useState(null); // store uploaded image file
+  const [selectedImage, setSelectedImage] = useState(null);
 
   // ✅ Filters & Pagination
   const [searchTerm, setSearchTerm] = useState("");
   const [yearFilter, setYearFilter] = useState("all");
+  const [deptFilter, setDeptFilter] = useState("all"); // ✅ Department filter
   const [page, setPage] = useState(1);
   const pageSize = 15;
+
+  // ✅ Departments list
+  const departments = [
+    { value: "all", label: "All Departments" },
+    { value: "at", label: "Automobile Engineering" },
+    { value: "ch", label: "Chemical Engineering" },
+    { value: "ce", label: "Civil Engineering" },
+    { value: "cs", label: "Computer Science Engineering" },
+    { value: "ec", label: "Electronics & Communication Engineering" },
+    { value: "eee", label: "Electrical & Electronics Engineering" },
+    { value: "me", label: "Mechanical Engineering" },
+    { value: "po", label: "Polymer Engineering" },
+    { value: "sc", label: "Science and English" },
+  ];
 
   // ✅ Helper: sort by register number
   const sortByRegisterNumber = (arr) => {
@@ -60,6 +75,7 @@ export default function StudentTable() {
 
       let data = res.data.data;
 
+      // ✅ Restrict HODs to their own department (except Science)
       if (role === "hod" && hodDepartment !== "sc") {
         data = data.filter((s) => s.department === hodDepartment);
       }
@@ -77,7 +93,7 @@ export default function StudentTable() {
     fetchStudents();
   }, []);
 
-  // ✅ Apply search & year filter
+  // ✅ Apply filters
   useEffect(() => {
     let data = [...students];
 
@@ -100,9 +116,13 @@ export default function StudentTable() {
         data = data.filter((s) => [5, 6].includes(Number(s.semester)));
     }
 
+    if (deptFilter !== "all") {
+      data = data.filter((s) => s.department === deptFilter);
+    }
+
     setFilteredStudents(sortByRegisterNumber(data));
     setPage(1);
-  }, [searchTerm, yearFilter, students]);
+  }, [searchTerm, yearFilter, deptFilter, students]);
 
   // Pagination
   const totalPages = Math.ceil(filteredStudents.length / pageSize);
@@ -111,7 +131,7 @@ export default function StudentTable() {
     page * pageSize
   );
 
-  // ✅ Enter edit mode
+  // ✅ Edit functions
   const startEditing = (student) => {
     setEditingId(student._id);
     setEditForm({
@@ -121,7 +141,7 @@ export default function StudentTable() {
       phone: student.phone,
       department: student.department,
       semester: student.semester,
-      batch: student.batch || "", // ✅ Pre-fill batch if available
+      batch: student.batch || "",
     });
     setSelectedImage(null);
   };
@@ -144,7 +164,6 @@ export default function StudentTable() {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  // ✅ Update student (send FormData if image selected)
   const handleUpdate = async (id) => {
     try {
       setAction("updating");
@@ -180,7 +199,6 @@ export default function StudentTable() {
     }
   };
 
-  // ✅ Delete student
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this student?")) return;
 
@@ -218,6 +236,7 @@ export default function StudentTable() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border px-2 py-1 rounded w-full md:w-1/3 text-sm"
         />
+
         <select
           value={yearFilter}
           onChange={(e) => setYearFilter(e.target.value)}
@@ -227,6 +246,18 @@ export default function StudentTable() {
           <option value="1">1st Year</option>
           <option value="2">2nd Year</option>
           <option value="3">3rd Year</option>
+        </select>
+
+        <select
+          value={deptFilter}
+          onChange={(e) => setDeptFilter(e.target.value)}
+          className="border px-2 py-1 rounded w-full md:w-1/4 text-sm"
+        >
+          {departments.map((dept) => (
+            <option key={dept.value} value={dept.value}>
+              {dept.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -244,8 +275,8 @@ export default function StudentTable() {
               <th className="p-2">Email</th>
               <th className="p-2">Phone</th>
               <th className="p-2">Department</th>
-              <th className="p-2">Semester</th> <th className="p-2">Batch</th>{" "}
-              {/* ✅ Added Batch */}
+              <th className="p-2">Semester</th>
+              <th className="p-2">Batch</th>
               <th className="p-2">Actions</th>
             </tr>
           </thead>
@@ -295,7 +326,6 @@ export default function StudentTable() {
                   )}
                 </td>
 
-                {/* Register No */}
                 <td className="p-2">
                   {editingId === s._id ? (
                     <input
@@ -309,7 +339,6 @@ export default function StudentTable() {
                   )}
                 </td>
 
-                {/* Name */}
                 <td className="p-2">
                   {editingId === s._id ? (
                     <input
@@ -323,7 +352,6 @@ export default function StudentTable() {
                   )}
                 </td>
 
-                {/* Email */}
                 <td className="p-2">
                   {editingId === s._id ? (
                     <input
@@ -337,7 +365,6 @@ export default function StudentTable() {
                   )}
                 </td>
 
-                {/* Phone */}
                 <td className="p-2">
                   {editingId === s._id ? (
                     <input
@@ -351,7 +378,6 @@ export default function StudentTable() {
                   )}
                 </td>
 
-                {/* Department */}
                 <td className="p-2 uppercase">
                   {editingId === s._id ? (
                     <input
@@ -395,7 +421,6 @@ export default function StudentTable() {
                   )}
                 </td>
 
-                {/* Actions */}
                 <td className="p-2 flex gap-2">
                   {editingId === s._id ? (
                     <>
@@ -434,7 +459,7 @@ export default function StudentTable() {
 
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={9} className="p-4 text-center text-gray-500">
+                <td colSpan={10} className="p-4 text-center text-gray-500">
                   No students found
                 </td>
               </tr>

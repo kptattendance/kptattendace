@@ -4,11 +4,154 @@ import { clerkClient } from "@clerk/express";
 import mongoose from "mongoose";
 import AttendanceRecord from "../models/AttendanceRecord.js";
 
+// BULK ADD students
+export const bulkAddStudents = async (req, res) => {
+  try {
+    const { role, department: hodDept } = req.user;
+    const { students } = req.body;
+
+    if (!Array.isArray(students) || students.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No students provided" });
+    }
+
+    if (role !== "admin" && role !== "hod") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized to add students" });
+    }
+
+    const results = [];
+
+    for (const s of students) {
+      let { registerNumber, name, email, phone, department, semester, batch } =
+        s;
+
+      // Normalize fields
+      email = email.toLowerCase();
+      department = department.toLowerCase();
+      batch = batch.toLowerCase();
+      registerNumber = registerNumber.toUpperCase();
+      name = name.toUpperCase();
+
+      // Validation
+      if (
+        !registerNumber ||
+        !name ||
+        !email ||
+        !phone ||
+        !department ||
+        !semester ||
+        !batch
+      ) {
+        results.push({
+          registerNumber,
+          success: false,
+          message: "Missing required fields",
+        });
+        continue;
+      }
+
+      // HOD restrictions
+      if (role === "hod") {
+        if (hodDept === "sc") {
+          results.push({
+            registerNumber,
+            success: false,
+            message: "Science HOD cannot add students",
+          });
+          continue;
+        }
+        if (department !== hodDept) {
+          results.push({
+            registerNumber,
+            success: false,
+            message: "HOD can only add students from their department",
+          });
+          continue;
+        }
+      }
+
+      try {
+        // Check if email exists in Clerk (including soft-deleted users)
+        const existingUsers = await clerkClient.users.getUserList({
+          emailAddress: [email],
+          includeDeleted: true,
+        });
+        if (existingUsers.length > 0) {
+          // Optional: hard-delete soft-deleted users automatically
+          for (const existing of existingUsers) {
+            if (existing.deletedAt) {
+              await clerkClient.users.deleteUser(existing.id, {
+                hardDelete: true,
+              });
+            }
+          }
+
+          // After purge, check again if email is still in use
+          const checkAgain = await clerkClient.users.getUserList({
+            emailAddress: [email],
+          });
+          if (checkAgain.length > 0) {
+            results.push({
+              registerNumber,
+              success: false,
+              message: "Email already exists in Clerk.",
+            });
+            continue;
+          }
+        }
+
+        // Create Clerk user
+        const clerkUser = await clerkClient.users.createUser({
+          emailAddress: [email],
+          firstName: name,
+          publicMetadata: { role: "student", department, batch },
+        });
+
+        // Save MongoDB document
+        const student = new Student({
+          clerkId: clerkUser.id,
+          registerNumber,
+          name,
+          email,
+          phone,
+          department,
+          semester,
+          batch,
+          role: "student",
+        });
+
+        await student.save();
+
+        results.push({ registerNumber, success: true, student });
+      } catch (err) {
+        console.error(`Error adding student ${registerNumber}:`, err);
+        results.push({ registerNumber, success: false, message: err.message });
+      }
+    }
+    res.status(201).json({
+      success: results.every((r) => r.success), // true only if all succeeded
+      message: results.every((r) => r.success)
+        ? "Bulk add completed successfully"
+        : "Bulk add partially failed",
+      results,
+    });
+  } catch (err) {
+    console.error("BulkAdd Error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to add students in bulk",
+    });
+  }
+};
+
 // CREATE student
 export const createStudent = async (req, res) => {
   try {
     const { role, department: hodDept } = req.user;
-    const { registerNumber, name, email, phone, department, semester } =
+    const { registerNumber, name, email, phone, department, semester, batch } =
       req.body;
 
     if (role !== "admin" && role !== "hod") {
@@ -38,6 +181,7 @@ export const createStudent = async (req, res) => {
       publicMetadata: {
         role: "student",
         department,
+        batch, // also store in Clerk metadata
       },
     });
 
@@ -50,9 +194,8 @@ export const createStudent = async (req, res) => {
       phone,
       department,
       semester,
+      batch,
       role: "student",
-      imageUrl: req.cloudinaryResult?.secure_url,
-      imagePublicId: req.cloudinaryResult?.public_id,
     });
 
     await student.save();
@@ -261,14 +404,14 @@ export const getStudentById = async (req, res) => {
 // SEARCH students
 export const searchStudents = async (req, res) => {
   try {
-    const { department, semester, registerNumber } = req.query;
+    const { department, semester, registerNumber, batch } = req.query;
     const filter = {};
     if (department) filter.department = department.toLowerCase();
     if (semester) filter.semester = Number(semester);
     if (registerNumber) filter.registerNumber = registerNumber;
-
+    if (batch) filter.batch = batch;
     const students = await Student.find(filter).select(
-      "name registerNumber department semester _id clerkId"
+      "name registerNumber department semester batch  _id clerkId"
     );
     res.json(students);
   } catch (err) {

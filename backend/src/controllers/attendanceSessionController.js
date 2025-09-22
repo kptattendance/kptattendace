@@ -6,37 +6,45 @@ import User from "../models/User.js";
 
 export const createSession = async (req, res) => {
   try {
-    const { date, timeSlot, subjectId, lecturerId, semester, department } =
-      req.body;
+    const {
+      date,
+      timeSlot,
+      subjectId,
+      lecturerId,
+      semester,
+      department,
+      batch,
+    } = req.body;
 
-    // 🔑 Find the corresponding User in DB using Clerk ID
     const staff = await User.findOne({ clerkId: lecturerId });
     if (!staff) {
       return res.status(400).json({ message: "Lecturer not found in system" });
     }
 
-    // Prevent duplicate session
+    // prevent duplicate for same slot/subject/sem/department/batch
     const exists = await AttendanceSession.findOne({
       date,
       timeSlot,
       subjectId,
       semester,
       department,
-      lecturerId: staff._id, // ✅ real ObjectId
+      batch, // ✅ include batch in uniqueness
+      lecturerId: staff._id,
     });
     if (exists) {
       return res
         .status(400)
-        .json({ message: "⚠️ Session already exists for this slot" });
+        .json({ message: "⚠️ Session already exists for this slot & batch" });
     }
 
     const session = await AttendanceSession.create({
       date: new Date(date),
       timeSlot,
       subjectId,
-      lecturerId: staff._id, // ✅ ObjectId
+      lecturerId: staff._id,
       semester,
       department,
+      batch, // ✅ save batch
     });
 
     res.status(201).json({ message: "✅ Session created", data: session });
@@ -81,19 +89,34 @@ export const getSessionById = async (req, res) => {
 
     if (!session) return res.status(404).json({ message: "Session not found" });
 
+    // ✅ Fetch students for this dept+sem+batch
+    let studentFilter = {
+      department: session.department,
+      semester: session.semester,
+    };
+
+    if (session.batch === "b1") {
+      studentFilter.batch = "b1";
+    } else if (session.batch === "b2") {
+      studentFilter.batch = "b2";
+    } else if (session.batch === "both") {
+      studentFilter.batch = { $in: ["b1", "b2"] };
+    }
+
+    const students = await Student.find(studentFilter);
+
+    // Also fetch attendance records
     const records = await AttendanceRecord.find({
       sessionId: session._id,
     }).populate("studentId");
 
-    res.json({ session, records });
+    res.json({ session, students, records });
   } catch (err) {
     res
       .status(500)
       .json({ message: "❌ Failed to fetch session", error: err.message });
   }
 };
-
-
 
 // UPDATE session (safe)
 export const updateSession = async (req, res) => {
@@ -116,7 +139,9 @@ export const updateSession = async (req, res) => {
       if (incoming.startsWith("user_")) {
         const staff = await User.findOne({ clerkId: incoming });
         if (!staff) {
-          return res.status(400).json({ message: "Lecturer (Clerk id) not found in DB" });
+          return res
+            .status(400)
+            .json({ message: "Lecturer (Clerk id) not found in DB" });
         }
         updateData.lecturerId = staff._id; // ObjectId
       } else if (mongoose.isValidObjectId(incoming)) {
@@ -145,8 +170,19 @@ export const updateSession = async (req, res) => {
       updateData.semester = num;
     }
 
+    // 5) Normalize batch if supplied
+    if (updateData.batch) {
+      const allowed = ["b1", "b2", "both"];
+      if (!allowed.includes(updateData.batch)) {
+        return res.status(400).json({ message: "Invalid batch value" });
+      }
+    }
+
     // 4) If subjectId present, ensure it looks like an ObjectId (optional but helpful)
-    if (updateData.subjectId && !mongoose.isValidObjectId(updateData.subjectId)) {
+    if (
+      updateData.subjectId &&
+      !mongoose.isValidObjectId(updateData.subjectId)
+    ) {
       return res.status(400).json({ message: "Invalid subjectId" });
     }
 
@@ -168,12 +204,15 @@ export const updateSession = async (req, res) => {
     console.error("Update Session Error:", err); // important for debugging
     // If it's a CastError (invalid ObjectId) provide clearer feedback
     if (err.name === "CastError") {
-      return res.status(400).json({ message: "Invalid value for a field", error: err.message });
+      return res
+        .status(400)
+        .json({ message: "Invalid value for a field", error: err.message });
     }
-    return res.status(500).json({ message: "❌ Failed to update session", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "❌ Failed to update session", error: err.message });
   }
 };
-
 
 // ✅ Delete session (cascade delete attendance records)
 export const deleteSession = async (req, res) => {

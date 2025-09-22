@@ -236,7 +236,8 @@ export default function AttendanceSessionTable({ refreshKey }) {
               <th className="p-2 text-left">Subject</th>
               <th className="p-2 text-left">Lecturer</th>
               <th className="p-2 text-left">Dept</th>
-              <th className="p-2 text-left">Sem</th>
+              <th className="p-2 text-left">Sem</th>{" "}
+              <th className="p-2 text-left">Batch</th> {/* ✅ new */}
               <th className="p-2 text-left">Actions</th>
             </tr>
           </thead>
@@ -245,157 +246,40 @@ export default function AttendanceSessionTable({ refreshKey }) {
             {paginated.map((s, idx) => (
               <tr key={s._id} className="border-t">
                 <td className="p-2">{(page - 1) * pageSize + idx + 1}</td>
-
-                {editId === s._id ? (
-                  <>
-                    <td className="p-2">
-                      <input
-                        className="border px-1 py-0.5 rounded w-28"
-                        value={editData.date}
-                        onChange={(e) =>
-                          setEditData({ ...editData, date: e.target.value })
-                        }
-                        type="date"
-                      />
-                    </td>
-                    <td className="p-2 flex gap-1">
-                      <input
-                        className="border px-1 py-0.5 rounded w-20"
-                        value={editData.startTime}
-                        onChange={(e) =>
-                          setEditData({
-                            ...editData,
-                            startTime: e.target.value,
-                          })
-                        }
-                        type="time"
-                      />
-                      <span className="self-center">—</span>
-                      <input
-                        className="border px-1 py-0.5 rounded w-20"
-                        value={editData.endTime}
-                        onChange={(e) =>
-                          setEditData({ ...editData, endTime: e.target.value })
-                        }
-                        type="time"
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        className="border px-1 py-0.5 rounded w-full"
-                        value={editData.subjectId || s.subject?.name || ""}
-                        onChange={(e) =>
-                          setEditData({
-                            ...editData,
-                            subjectId: e.target.value,
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        className="border px-1 py-0.5 rounded w-full"
-                        value={editData.lecturerId || s.lecturerName || ""}
-                        onChange={(e) =>
-                          setEditData({
-                            ...editData,
-                            lecturerId: e.target.value,
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        className="border px-1 py-0.5 rounded w-full"
-                        value={editData.department}
-                        onChange={(e) =>
-                          setEditData({
-                            ...editData,
-                            department: e.target.value,
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        className="border px-1 py-0.5 rounded w-12"
-                        value={editData.semester}
-                        onChange={(e) =>
-                          setEditData({ ...editData, semester: e.target.value })
-                        }
-                      />
-                    </td>
-                    <td className="p-2 flex gap-2">
-                      <button
-                        className="text-green-600 px-2 py-1 rounded"
-                        onClick={() => handleSave(s._id)}
-                      >
-                        <Save className="w-4 h-4 inline" />{" "}
-                      </button>
-                      <button
-                        className="text-gray-600 px-2 py-1 rounded"
-                        onClick={cancelEdit}
-                      >
-                        <X className="w-4 h-4 inline" />
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="p-2">{(s.date || "").slice(0, 10)}</td>
-                    <td className="p-2">{s.timeSlot || ""}</td>
-                    <td className="p-2">
-                      {s.subjectId?.code
-                        ? `${s.subjectId.code} — ${s.subjectId.name}`
-                        : s.subjectName || ""}
-                    </td>
-
-                    <td className="p-2">
-                      {s.lecturerId?.name || s.lecturerName || ""}
-                    </td>
-
-                    <td className="p-2 uppercase">{s.department}</td>
-                    <td className="p-2">{s.semester}</td>
-                    <td className="p-2 flex gap-2">
-                      {/* <button
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                        onClick={() =>
-                          window.location.assign(`/attendance/take/${s._id}`)
-                        }
-                      >
-                        Take
-                      </button> */}
-
-                      <Link href={`/attendance/take/${s._id}`}>
-                        <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                          Take
-                        </button>
-                      </Link>
-
-                      <button
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                        onClick={() => startEdit(s)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        onClick={() => handleDelete(s._id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-            {paginated.length === 0 && (
-              <tr>
-                <td colSpan={8} className="p-3 text-center text-gray-500">
-                  No sessions found
+                <td className="p-2">{(s.date || "").slice(0, 10)}</td>
+                <td className="p-2">{s.timeSlot || ""}</td>
+                <td className="p-2">
+                  {s.subjectId?.code
+                    ? `${s.subjectId.code} — ${s.subjectId.name}`
+                    : s.subjectName || ""}
+                </td>
+                <td className="p-2">
+                  {s.lecturerId?.name || s.lecturerName || ""}
+                </td>
+                <td className="p-2 uppercase">{s.department}</td>
+                <td className="p-2">{s.semester}</td>
+                <td className="p-2">{s.batch || "—"}</td> {/* ✅ new */}
+                <td className="p-2 flex gap-2">
+                  <Link href={`/attendance/take/${s._id}`}>
+                    <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                      Mark Attendance
+                    </button>
+                  </Link>
+                  {/* <button
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                    onClick={() => startEdit(s)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button> */}
+                  <button
+                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    onClick={() => handleDelete(s._id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>

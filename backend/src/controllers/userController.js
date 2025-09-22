@@ -237,12 +237,21 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    // 1. Delete Clerk user
-    await clerkClient.users.deleteUser(user.clerkId);
-
-    // 2. Delete Cloudinary image
+    // 1. Delete Cloudinary image first (optional)
     if (user.imagePublicId) {
-      await cloudinary.uploader.destroy(user.imagePublicId);
+      try {
+        const result = await cloudinary.uploader.destroy(user.imagePublicId);
+        console.log("Cloudinary deletion result:", result);
+      } catch (err) {
+        console.error("Cloudinary deletion error:", err);
+      }
+    }
+
+    // 2. Delete Clerk user
+    try {
+      await clerkClient.users.deleteUser(user.clerkId);
+    } catch (err) {
+      console.error("Clerk deletion error:", err);
     }
 
     // 3. Delete MongoDB record
@@ -250,6 +259,38 @@ export const deleteUser = async (req, res) => {
 
     res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// SYNC user (Clerk → MongoDB if missing)
+export const syncUser = async (req, res) => {
+  try {
+    const clerkId = req.user.id;
+
+    let user = await User.findOne({ clerkId });
+
+    if (!user) {
+      const clerkUser = await clerkClient.users.getUser(clerkId);
+
+      user = new User({
+        name: clerkUser.firstName || "Unknown",
+        email:
+          clerkUser.emailAddresses[0]?.emailAddress || "unknown@example.com",
+        phone: clerkUser.phoneNumbers[0]?.phoneNumber || "N/A",
+        role: clerkUser.publicMetadata?.role || "student", // fallback
+        department: clerkUser.publicMetadata?.department || null,
+        clerkId: clerkUser.id,
+        imageUrl: clerkUser.profileImageUrl || "/default-avatar.png",
+      });
+
+      await user.save();
+      console.log(`✅ Synced new user: ${user.email}`);
+    }
+
+    return res.json({ success: true, data: user });
+  } catch (err) {
+    console.error("SyncUser Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
