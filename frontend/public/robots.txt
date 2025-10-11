@@ -1,0 +1,17 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+Disallow: /scan
+Disallow: /settings
+Disallow: /profile
+
+# Host
+Host: https://kptattendance.vercel.app
+
+# Sitemaps
+Sitemap: https://kptattendance.vercel.app/sitemap.xml
