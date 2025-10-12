@@ -86,6 +86,7 @@ export default function TakeAttendancePage() {
   };
 
   // Save attendance with confirmation
+  // Save attendance with confirmation + WhatsApp message for absentees
   const handleSave = async () => {
     try {
       const token = await getToken();
@@ -108,7 +109,12 @@ export default function TakeAttendancePage() {
       ).length;
       const absent = total - present;
 
-      // Show confirmation toast with JSX
+      // ✅ Find all absentees
+      const absentees = students.filter(
+        (st) => attendance[st._id] === "absent"
+      );
+
+      // ✅ Show success toast
       toast.success(
         <div className="text-sm">
           <p className="font-semibold text-green-700 mb-2">
@@ -127,24 +133,51 @@ export default function TakeAttendancePage() {
             📖 <span className="font-medium">Subject:</span>{" "}
             {sessionDetails?.subjectId?.name || "-"}
           </p>
-          <p>
-            👨‍🏫 <span className="font-medium">Staff:</span>{" "}
-            {sessionDetails?.lecturerId?.name || "-"}
-          </p>
-
           <hr className="my-2" />
-          <p>
-            👥 <span className="text-blue-600 font-medium">Total:</span> {total}
-          </p>
-          <p className="text-orange-600">
-            ✔️ <span className="font-medium">Present:</span> {present}
-          </p>
-          <p className="text-red-600">
-            ❌ <span className="font-medium">Absent:</span> {absent}
-          </p>
+          <p>👥 Total: {total}</p>
+          <p className="text-orange-600">✔️ Present: {present}</p>
+          <p className="text-red-600">❌ Absent: {absent}</p>
         </div>,
         { duration: 7000 }
       );
+
+      // ✅ WhatsApp Notification Logic
+      if (absentees.length > 0) {
+        const confirmSend = window.confirm(
+          `There are ${absentees.length} absent students.\nDo you want to send WhatsApp messages?`
+        );
+
+        if (confirmSend) {
+          let index = 0;
+
+          const openNext = () => {
+            if (index >= absentees.length) {
+              alert("✅ WhatsApp messages opened for all absentees.");
+              return;
+            }
+
+            const st = absentees[index];
+            const msg = `Dear ${st.name}, you were marked *ABSENT* for ${
+              sessionDetails?.subjectId?.name || "today's class"
+            }. Please contact your lecturer if needed.`;
+            const url = `https://wa.me/91${st.phone}?text=${encodeURIComponent(
+              msg
+            )}`;
+
+            window.open(url, "_blank");
+
+            index++;
+            const next = window.confirm(
+              `Opened WhatsApp for ${st.name}.\n\nOpen for next student? (${index}/${absentees.length})`
+            );
+
+            if (next) openNext();
+            else alert("Stopped sending WhatsApp messages.");
+          };
+
+          openNext();
+        }
+      }
     } catch (err) {
       console.error("Save error:", err);
       toast.error("Failed to save attendance");

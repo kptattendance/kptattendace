@@ -25,9 +25,6 @@ export default function AttendanceSessionForm({ onCreated }) {
     semester: "",
     department: "",
     batch: "", // ✅ new
-
-    room: "",
-    notes: "",
   });
 
   const myRole = user?.publicMetadata?.role;
@@ -117,8 +114,7 @@ export default function AttendanceSessionForm({ onCreated }) {
         semester: Number(form.semester),
         department: form.department,
         batch: form.batch,
-        room: form.room,
-        notes: form.notes,
+
         lecturerId: user?.id,
         duration, // ✅ number of hours
       };
@@ -149,8 +145,6 @@ export default function AttendanceSessionForm({ onCreated }) {
         semester: "",
         department: myRole === "hod" ? myDept : "",
         batch: "",
-        room: "",
-        notes: "",
       });
 
       if (onCreated) onCreated(res.data.data || res.data);
@@ -311,24 +305,6 @@ export default function AttendanceSessionForm({ onCreated }) {
           <option value="b2">B2</option>
           <option value="both">Both B1 & B2</option>
         </select>
-
-        {/* Room */}
-        <input
-          name="room"
-          value={form.room}
-          onChange={handleChange}
-          placeholder="Room / Location"
-          className="border px-2 py-1 rounded md:col-span-2"
-        />
-
-        {/* Notes */}
-        <input
-          name="notes"
-          value={form.notes}
-          onChange={handleChange}
-          placeholder="Notes (optional)"
-          className="border px-2 py-1 rounded md:col-span-3"
-        />
 
         <div className="md:col-span-3 flex justify-end">
           <button
