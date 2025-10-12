@@ -31,7 +31,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000", // local dev frontend
-      "https://kptattendance.vercel.app", // your actual Vercel frontend URL
+      "https://kptattendace.vercel.app", // your actual Vercel frontend URL
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true, // allows cookies/tokens to flow
