@@ -27,7 +27,16 @@ const PORT = process.env.PORT || 4000;
 
 // core middleware
 app.use(helmet());
-app.use(cors()); // configure origin in production
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000", // local dev frontend
+      "https://kptattendance.vercel.app", // your actual Vercel frontend URL
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true, // allows cookies/tokens to flow
+  })
+);
 app.use(compression());
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
