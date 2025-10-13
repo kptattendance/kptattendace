@@ -5,20 +5,24 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 
 export default function TakeAttendancePage() {
   const { id } = useParams();
-  const router = useRouter();
   const { getToken } = useAuth();
-
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [loading, setLoading] = useState(true);
   const [sessionDetails, setSessionDetails] = useState(null);
 
+  useEffect(() => {
+    if (isLoaded && !user) router.replace("/unauthorized");
+  }, [isLoaded, user, router]);
   // Fetch students + session details
   useEffect(() => {
-    if (!id) return;
+    if (!id || !isLoaded || !user) return;
 
     const fetchData = async () => {
       try {
@@ -185,7 +189,7 @@ export default function TakeAttendancePage() {
   };
 
   if (loading) return <p className="p-4">Loading students...</p>;
-
+  if (!isLoaded) return <div>Loading...</div>;
   return (
     <div className="p-4">
       {/* Header */}

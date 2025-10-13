@@ -3,13 +3,9 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 
 export default clerkMiddleware();
 
-
-
-
-
 export const config = {
   matcher: [
-    // Protect all app routes but exclude static assets and API
-    "/((?!_next|api|favicon.ico|.*\\..*).*)",
+    // Protect everything except public & attendance take route
+    "/((?!_next|api|favicon.ico|.*\\..*|attendance/take/.*).*)",
   ],
 };

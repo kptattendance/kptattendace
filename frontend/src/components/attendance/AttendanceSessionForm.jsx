@@ -24,7 +24,7 @@ export default function AttendanceSessionForm({ onCreated }) {
     subjectId: "",
     semester: "",
     department: "",
-    batch: "", // ✅ new
+    batch: "", 
   });
 
   const myRole = user?.publicMetadata?.role;
