@@ -4,8 +4,6 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
-import LoaderOverlay from "../LoaderOverlay";
-import AttendanceSessionTable from "./AttendanceSessionTable";
 import { useRouter } from "next/navigation";
 
 export default function AttendanceSessionForm({ onCreated }) {
@@ -24,12 +22,20 @@ export default function AttendanceSessionForm({ onCreated }) {
     subjectId: "",
     semester: "",
     department: "",
-    batch: "", 
+    batch: "",
   });
 
   const myRole = user?.publicMetadata?.role;
   const myDept = user?.publicMetadata?.department;
 
+  // Lock department if HOD
+  useEffect(() => {
+    if (myRole === "hod" && myDept) {
+      setForm((f) => ({ ...f, department: myDept }));
+    }
+  }, [myRole, myDept]);
+
+  // ✅ Single useEffect to load subjects
   useEffect(() => {
     const loadSubjects = async () => {
       if (!form.department || !form.semester) return;
@@ -40,7 +46,6 @@ export default function AttendanceSessionForm({ onCreated }) {
           `${process.env.NEXT_PUBLIC_API_URL}/api/subjects/getsubjects?department=${form.department}&semester=${form.semester}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log(res.data.data);
         setSubjects(res.data.data || []);
       } catch (err) {
         console.error("Error loading subjects:", err);
@@ -49,33 +54,8 @@ export default function AttendanceSessionForm({ onCreated }) {
         setSubjectsLoading(false);
       }
     };
-    setSubjects([]); // clear before loading
-    loadSubjects();
-  }, [form.department, form.semester, getToken]);
 
-  // Lock department if HOD
-  useEffect(() => {
-    if (myRole === "hod" && myDept) {
-      setForm((f) => ({ ...f, department: myDept }));
-    }
-  }, [myRole, myDept]);
-
-  // Load subjects whenever sem + dept selected
-  useEffect(() => {
-    const loadSubjects = async () => {
-      if (!form.department || !form.semester) return;
-      try {
-        const token = await getToken();
-        const res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/subjects/getsubjects?department=${form.department}&semester=${form.semester}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setSubjects(res.data.data || []);
-      } catch (err) {
-        console.error("Error loading subjects:", err);
-        toast.error("Failed to load subjects");
-      }
-    };
+    setSubjects([]); // clear before loading new
     loadSubjects();
   }, [form.department, form.semester, getToken]);
 
@@ -104,7 +84,7 @@ export default function AttendanceSessionForm({ onCreated }) {
       const token = await getToken();
       const start = new Date(`1970-01-01T${form.startTime}:00`);
       const end = new Date(`1970-01-01T${form.endTime}:00`);
-      const duration = (end - start) / (1000 * 60 * 60); // hours
+      let duration = (end - start) / (1000 * 60 * 60);
       if (!duration || duration <= 0) duration = 1;
 
       const payload = {
@@ -114,12 +94,11 @@ export default function AttendanceSessionForm({ onCreated }) {
         semester: Number(form.semester),
         department: form.department,
         batch: form.batch,
-
         lecturerId: user?.id,
-        duration, // ✅ number of hours
+        duration,
       };
 
-      console.log("this is payload", payload);
+      console.log("Payload:", payload);
 
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/attendance/sessions`,
@@ -131,12 +110,11 @@ export default function AttendanceSessionForm({ onCreated }) {
         duration: 1000,
       });
 
-      const session = res.data.data || res.data;
-      console.log(session);
+      if (res.data.redirectTo) {
+        router.push(res.data.redirectTo);
+      }
 
-      // ✅ Redirect to take attendance
-      router.push(`/attendance/take/${session._id}`);
-
+      // Reset form
       setForm({
         date: "",
         startTime: "",
@@ -169,22 +147,18 @@ export default function AttendanceSessionForm({ onCreated }) {
     { value: "sc", label: "Science and English" },
   ];
 
-  // Generate times 09:00 - 17:00 (store 24h, show 12h)
+  // Generate times 09:00 - 17:00
   const times = Array.from({ length: 9 }, (_, i) => {
-    const hour = 9 + i; // 9 → 17
-    const value = `${hour.toString().padStart(2, "0")}:00`; // stored in form (24h)
-
-    // display in 12h format
+    const hour = 9 + i;
+    const value = `${hour.toString().padStart(2, "0")}:00`;
     const hour12 = hour % 12 === 0 ? 12 : hour % 12;
     const suffix = hour < 12 ? "AM" : "PM";
     const label = `${hour12}:00 ${suffix}`;
-
     return { value, label };
   });
 
   return (
     <section className="bg-white p-4 rounded-lg shadow-sm">
-      {loading && <LoaderOverlay message="Creating session..." />}
       <h3 className="text-lg font-semibold mb-3">Create Attendance Session</h3>
 
       <form
@@ -266,8 +240,7 @@ export default function AttendanceSessionForm({ onCreated }) {
           ))}
         </select>
 
-        {/* Subjects (filtered) */}
-        {/* Subjects (filtered) */}
+        {/* Subjects */}
         <select
           name="subjectId"
           value={form.subjectId}
@@ -292,6 +265,7 @@ export default function AttendanceSessionForm({ onCreated }) {
             </option>
           ))}
         </select>
+
         {/* Batch */}
         <select
           name="batch"
@@ -309,10 +283,17 @@ export default function AttendanceSessionForm({ onCreated }) {
         <div className="md:col-span-3 flex justify-end">
           <button
             type="submit"
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-60"
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-60 flex items-center gap-2"
             disabled={loading}
           >
-            {loading ? "Creating..." : "Mark Attendance"}
+            {loading ? (
+              <>
+                <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+                Creating...
+              </>
+            ) : (
+              "Mark Attendance"
+            )}
           </button>
         </div>
       </form>

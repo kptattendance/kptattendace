@@ -4,55 +4,39 @@ import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 
+
+
 export const createSession = async (req, res) => {
   try {
-    const {
-      date,
-      timeSlot,
-      subjectId,
-      lecturerId,
-      semester,
-      department,
-      batch,
-    } = req.body;
+    let { lecturerId, ...data } = req.body;
 
-    const staff = await User.findOne({ clerkId: lecturerId });
-    if (!staff) {
-      return res.status(400).json({ message: "Lecturer not found in system" });
+    // ✅ If lecturerId is not a Mongo ObjectId (e.g., it's a Clerk ID like "user_33Rox...")
+    if (lecturerId && !mongoose.Types.ObjectId.isValid(lecturerId)) {
+      const foundUser = await User.findOne({ clerkId: lecturerId }); // fixed field name
+      if (!foundUser) {
+        return res.status(400).json({
+          message: `No matching Mongo user found for Clerk ID ${lecturerId}`,
+        });
+      }
+      lecturerId = foundUser._id; // replace with Mongo ObjectId
     }
 
-    // prevent duplicate for same slot/subject/sem/department/batch
-    const exists = await AttendanceSession.findOne({
-      date,
-      timeSlot,
-      subjectId,
-      semester,
-      department,
-      batch, // ✅ include batch in uniqueness
-      lecturerId: staff._id,
-    });
-    if (exists) {
-      return res
-        .status(400)
-        .json({ message: "⚠️ Session already exists for this slot & batch" });
-    }
-
+    // ✅ Create attendance session
     const session = await AttendanceSession.create({
-      date: new Date(date),
-      timeSlot,
-      subjectId,
-      lecturerId: staff._id,
-      semester,
-      department,
-      batch, // ✅ save batch
+      ...data,
+      lecturerId,
     });
 
-    res.status(201).json({ message: "✅ Session created", data: session });
-  } catch (err) {
-    console.error("Create Session Error:", err);
-    res
-      .status(500)
-      .json({ message: "❌ Failed to create session", error: err.message });
+    res.status(201).json({
+      message: "Session created successfully ✅",
+      data: session,
+  redirectTo: `/attendance/take/${session._id}`,
+    });
+  } catch (error) {
+    console.error("Error creating session:", error);
+    res.status(400).json({
+      message: error.message || "Failed to create attendance session ❌",
+    });
   }
 };
 
