@@ -111,7 +111,8 @@ export default function AttendanceSessionForm({ onCreated }) {
       });
 
       if (res.data.redirectTo) {
-        router.push(res.data.redirectTo);
+        // router.push(res.data.redirectTo);
+        window.location.href = res.data.redirectTo;
       }
 
       // Reset form
