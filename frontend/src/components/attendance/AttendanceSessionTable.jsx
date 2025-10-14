@@ -260,17 +260,6 @@ export default function AttendanceSessionTable({ refreshKey }) {
                 <td className="p-2">{s.semester}</td>
                 <td className="p-2">{s.batch || "—"}</td> {/* ✅ new */}
                 <td className="p-2 flex gap-2">
-                  <Link href={`/attendance/take/${s._id}`}>
-                    <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                      Mark Attendance
-                    </button>
-                  </Link>
-                  {/* <button
-                    className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                    onClick={() => startEdit(s)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button> */}
                   <button
                     className="p-1 text-red-600 hover:bg-red-50 rounded"
                     onClick={() => handleDelete(s._id)}

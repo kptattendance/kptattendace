@@ -300,6 +300,7 @@ export const updateStudent = async (req, res) => {
 };
 
 // DELETE student
+
 export const deleteStudent = async (req, res) => {
   try {
     const { role, department } = req.user;
@@ -325,18 +326,36 @@ export const deleteStudent = async (req, res) => {
       });
     }
 
-    // 1. Delete Clerk user
+    // ✅ Step 1: Try deleting Clerk user safely
     if (student.clerkId) {
-      await clerkClient.users.deleteUser(student.clerkId);
+      try {
+        console.log("🧹 Deleting Clerk user:", student.clerkId);
+        await clerkClient.users.deleteUser(student.clerkId);
+        console.log("✅ Clerk user deleted successfully");
+      } catch (clerkErr) {
+        // Clerk 404 = already deleted → continue safely
+        if (clerkErr?.status === 404) {
+          console.warn("⚠️ Clerk user not found, skipping...");
+        } else {
+          console.error("❌ Clerk deletion failed:", clerkErr);
+          // Don’t stop entire flow — continue with Mongo cleanup
+        }
+      }
     }
 
-    // 2. Delete Cloudinary image
+    // ✅ Step 2: Delete Cloudinary image (if any)
     if (student.imagePublicId) {
-      await cloudinary.uploader.destroy(student.imagePublicId);
+      try {
+        await cloudinary.uploader.destroy(student.imagePublicId);
+        console.log("🧹 Deleted Cloudinary image:", student.imagePublicId);
+      } catch (imgErr) {
+        console.warn("⚠️ Cloudinary image deletion failed:", imgErr.message);
+      }
     }
 
-    // 3. Delete MongoDB doc
+    // ✅ Step 3: Delete from MongoDB
     await student.deleteOne();
+    console.log("✅ Deleted student from MongoDB:", student.name);
 
     res.json({ success: true, message: "Student deleted successfully" });
   } catch (err) {

@@ -3,34 +3,63 @@ import AttendanceRecord from "../models/AttendanceRecord.js";
 import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import User from "../models/User.js";
-
-
+import Subject from "../models/Subject.js";
 
 export const createSession = async (req, res) => {
   try {
-    let { lecturerId, ...data } = req.body;
+    let { lecturerId, subjectId, ...data } = req.body;
 
-    // ✅ If lecturerId is not a Mongo ObjectId (e.g., it's a Clerk ID like "user_33Rox...")
+    // ✅ Convert Clerk ID → Mongo _id if needed
     if (lecturerId && !mongoose.Types.ObjectId.isValid(lecturerId)) {
-      const foundUser = await User.findOne({ clerkId: lecturerId }); // fixed field name
+      const foundUser = await User.findOne({ clerkId: lecturerId });
       if (!foundUser) {
         return res.status(400).json({
           message: `No matching Mongo user found for Clerk ID ${lecturerId}`,
         });
       }
-      lecturerId = foundUser._id; // replace with Mongo ObjectId
+      lecturerId = foundUser._id;
     }
 
-    // ✅ Create attendance session
+    // ✅ Validate subject
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({
+        message: `Subject not found for ID ${subjectId}`,
+      });
+    }
+
+    // ✅ Check if a session already exists for the same date, time, and subject
+    const existingSession = await AttendanceSession.findOne({
+      date: data.date,
+      timeSlot: data.timeSlot,
+      subjectId,
+      department: data.department,
+      semester: data.semester,
+    });
+
+    if (existingSession) {
+      return res.status(400).json({
+        message: "A session already exists for this date and time slot ⚠️",
+      });
+    }
+
+    // ✅ Create new session
     const session = await AttendanceSession.create({
       ...data,
       lecturerId,
+      subjectId,
     });
+
+    // ✅ Include subject name in response
+    const responseData = {
+      ...session.toObject(),
+      subjectName: subject.name,
+      subjectCode: subject.code,
+    };
 
     res.status(201).json({
       message: "Session created successfully ✅",
-      data: session,
-  redirectTo: `/attendance/take/${session._id}`,
+      data: responseData,
     });
   } catch (error) {
     console.error("Error creating session:", error);
