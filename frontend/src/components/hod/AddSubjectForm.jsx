@@ -30,17 +30,14 @@ export default function AddSubjectForm() {
     code: "",
     name: "",
     semester: "",
-    departments: [],
+    department: "",
   });
   const [status, setStatus] = useState(null);
-
-  // 🔄 state to trigger refresh of table
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 🔒 Auto-lock department if user is HOD
   useEffect(() => {
     if (myRole === "hod" && myDept) {
-      setForm((f) => ({ ...f, departments: [myDept] }));
+      setForm((f) => ({ ...f, department: myDept }));
     }
   }, [myRole, myDept]);
 
@@ -49,43 +46,17 @@ export default function AddSubjectForm() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleDepartmentsChange = (e) => {
-    const { options } = e.target;
-    const selected = [];
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].selected) {
-        selected.push(options[i].value);
-      }
-    }
-    setForm({ ...form, departments: selected });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("saving");
 
     try {
       const token = await getToken();
-
-      // Extract dept code from subject code (e.g. 20EC54I → EC)
       const codeDept = form.code.match(/[A-Z]{2,3}/)?.[0];
+      if (!codeDept) throw new Error("❌ Invalid subject code format");
 
-      if (!codeDept) {
-        throw new Error("❌ Invalid subject code format");
-      }
-
-      // Restrict HODs
-      if (myRole === "hod") {
-        if (myDept !== codeDept) {
-          throw new Error(
-            `❌ You are ${myDept} HOD. You can only add subjects with code containing "${myDept}", but you entered "${codeDept}".`
-          );
-        }
-        if (!form.departments.includes(myDept)) {
-          throw new Error(
-            `❌ Department must be locked to ${myDept}. Cannot assign other departments.`
-          );
-        }
+      if (myRole === "hod" && form.department !== myDept) {
+        throw new Error(`❌ Department must be locked to ${myDept}`);
       }
 
       const payload = {
@@ -93,33 +64,26 @@ export default function AddSubjectForm() {
         code: form.code.toUpperCase(),
         name: form.name.trim(),
         semester: Number(form.semester),
-        departments: form.departments.map((d) => d.toUpperCase()),
+        department: form.department.toUpperCase(),
       };
 
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/subjects/addsubject`,
         payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       toast.success("✅ Subject added successfully!");
-
-      // reset form
       setForm({
         code: "",
         name: "",
         semester: "",
-        departments: myRole === "hod" && myDept ? [myDept] : [],
+        department: myRole === "hod" && myDept ? myDept : "",
       });
 
-      // 🔄 trigger table refresh
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      console.error(err);
+      console.error(err.message);
       toast.error(err.message || "❌ Failed to add subject");
     } finally {
       setStatus(null);
@@ -131,11 +95,11 @@ export default function AddSubjectForm() {
       {status === "saving" && <LoaderOverlay message="Adding subject..." />}
 
       <h2 className="text-2xl font-semibold mb-4">Add Subject</h2>
+
       <form
         onSubmit={handleSubmit}
         className="space-y-4 bg-white p-6 rounded-lg shadow"
       >
-        {/* Code */}
         <input
           name="code"
           value={form.code}
@@ -145,7 +109,6 @@ export default function AddSubjectForm() {
           className="block w-full rounded-md border px-3 py-2"
         />
 
-        {/* Name */}
         <input
           name="name"
           value={form.name}
@@ -155,7 +118,6 @@ export default function AddSubjectForm() {
           className="block w-full rounded-md border px-3 py-2"
         />
 
-        {/* Semester */}
         <select
           name="semester"
           value={form.semester}
@@ -171,7 +133,6 @@ export default function AddSubjectForm() {
           ))}
         </select>
 
-        {/* Departments */}
         {myRole === "hod" ? (
           <input
             value={myDept}
@@ -180,13 +141,13 @@ export default function AddSubjectForm() {
           />
         ) : (
           <select
-            name="departments"
-            multiple
-            value={form.departments}
-            onChange={handleDepartmentsChange}
+            name="department"
+            value={form.department}
+            onChange={handleChange}
             required
             className="block w-full rounded-md border px-3 py-2 bg-gray-50"
           >
+            <option value="">Select Department</option>
             {departments.map((dept) => (
               <option key={dept.value} value={dept.value}>
                 {dept.label}
@@ -203,7 +164,6 @@ export default function AddSubjectForm() {
         </button>
       </form>
 
-      {/* pass refreshKey */}
       <SubjectTable refreshKey={refreshKey} />
     </section>
   );

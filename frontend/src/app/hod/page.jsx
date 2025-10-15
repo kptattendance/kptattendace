@@ -12,6 +12,7 @@ import AttendanceSessionForm from "@/components/attendance/AttendanceSessionForm
 import ConsolidatedAttendance from "@/components/hod/ConsolidatedAttendance";
 import EachStudentAttendance from "@/components/hod/statistics/EachStudentAttendance";
 import ClassesHandled from "@/components/hod/ClassesHandled";
+import SubjectStatistics from "@/components/staff/SubjectStatistics";
 
 export default function HODDashboardPage() {
   const [selected, setSelected] = useState("mark-attendance");
@@ -55,6 +56,7 @@ export default function HODDashboardPage() {
 
           {/* Content area */}
           {selected === "mark-attendance" && <AttendanceSessionForm />}
+          {selected === "subject-attendance" && <SubjectStatistics />}
           {selected === "consolidated-attendance" && (
             <ConsolidatedAttendance dept={hodDepartment} />
           )}

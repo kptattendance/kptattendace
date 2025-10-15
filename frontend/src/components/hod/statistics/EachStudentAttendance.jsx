@@ -30,6 +30,7 @@ export default function EachStudentAttendance() {
         setStudent(null);
         return;
       }
+      console.log(res.data);
       setStudent(res.data[0]); // pick first match
     } catch (err) {
       console.error("Failed to search student:", err);
@@ -58,9 +59,14 @@ export default function EachStudentAttendance() {
           className="border px-3 py-2 rounded-md"
         >
           <option value="">Select Department</option>
+          <option value="at">AT</option>
+          <option value="ce">CE</option>
+          <option value="ch">CH</option>
           <option value="cs">CSE</option>
           <option value="ec">ECE</option>
+          <option value="eee">EEE</option>
           <option value="me">ME</option>
+          <option value="po">PO</option>
         </select>
 
         <select
@@ -96,20 +102,43 @@ export default function EachStudentAttendance() {
 
       {student && (
         <>
-          <div className="mb-6 p-4 bg-gray-100 rounded-lg shadow">
-            <h3 className="text-lg font-medium mb-2">Student Info</h3>
-            <p>
-              <strong>Name:</strong> {student.name}
-            </p>
-            <p>
-              <strong>Reg No:</strong> {student.registerNumber}
-            </p>
-            <p>
-              <strong>Department:</strong> {student.department}
-            </p>
-            <p>
-              <strong>Semester:</strong> {student.semester}
-            </p>
+          <div className="mb-6 p-4 bg-gray-100 rounded-lg shadow flex items-center gap-6">
+            {/* ✅ Student Image */}
+            <div className="flex-shrink-0">
+              {student.imageUrl ? (
+                <img
+                  src={student.imageUrl}
+                  alt={student.name}
+                  className="w-24 h-24 rounded-full object-cover border border-gray-300 shadow-sm"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+                  No Image
+                </div>
+              )}
+            </div>
+
+            {/* ✅ Student Details */}
+            <div>
+              <h3 className="text-lg font-medium mb-2">Student Info</h3>
+              <p>
+                <strong>Name:</strong> {student.name}
+              </p>
+              <p>
+                <strong>Reg No:</strong> {student.registerNumber}
+              </p>
+              <p>
+                <strong>Department:</strong> {student.department?.toUpperCase()}
+              </p>
+              <p>
+                <strong>Semester:</strong> {student.semester}
+              </p>
+              {student.phone && (
+                <p>
+                  <strong>Phone:</strong> {student.phone}
+                </p>
+              )}
+            </div>
           </div>
 
           <StudentStats studentId={student._id} />

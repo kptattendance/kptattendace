@@ -1,9 +1,7 @@
 "use client";
-import { useUser } from "@clerk/nextjs";
-
+import { useUser, useAuth } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Trash2, Pencil, Check, X } from "lucide-react";
 import LoaderOverlay from "../LoaderOverlay";
@@ -14,11 +12,14 @@ export default function SubjectTable({ refreshKey }) {
 
   const [subjects, setSubjects] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(true); // for fetching list
-  const [actionLoading, setActionLoading] = useState(false); // for delete/edit
-  const [semesterFilter, setSemesterFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // Inline edit state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [semesterFilter, setSemesterFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({
     code: "",
@@ -26,26 +27,17 @@ export default function SubjectTable({ refreshKey }) {
     semester: "",
   });
 
-  // Filters & pagination
-  const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-
-  // Fetch subjects
+  const role = user?.publicMetadata?.role || "user";
+  const hodDepartment = user?.publicMetadata?.department || null;
 
   const fetchSubjects = async () => {
     try {
       setLoading(true);
       const token = await getToken();
-
-      const department = user?.publicMetadata?.department || null;
-      const role = user?.publicMetadata?.role || "user";
-
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/subjects/getsubjects`;
 
-      // If user is NOT admin, filter by department
-      if (role !== "admin" && department) {
-        url += `?department=${department}`;
+      if (role === "hod" && hodDepartment !== "sc") {
+        url += `?department=${hodDepartment}`;
       }
 
       const res = await axios.get(url, {
@@ -54,6 +46,7 @@ export default function SubjectTable({ refreshKey }) {
       console.log(res.data.data);
       setSubjects(res.data.data);
     } catch (err) {
+      console.error(err);
       toast.error("❌ Failed to fetch subjects");
     } finally {
       setLoading(false);
@@ -64,25 +57,9 @@ export default function SubjectTable({ refreshKey }) {
     fetchSubjects();
   }, [refreshKey]);
 
-  // Apply search filter
-  useEffect(() => {
-    let data = [...subjects];
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      data = data.filter(
-        (s) =>
-          s.name.toLowerCase().includes(lower) ||
-          s.code.toLowerCase().includes(lower)
-      );
-    }
-    setFiltered(data);
-    setPage(1);
-  }, [searchTerm, subjects]);
-
   useEffect(() => {
     let data = [...subjects];
 
-    // Search filter
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       data = data.filter(
@@ -92,20 +69,17 @@ export default function SubjectTable({ refreshKey }) {
       );
     }
 
-    // Semester filter
     if (semesterFilter) {
       data = data.filter((s) => String(s.semester) === String(semesterFilter));
     }
 
     setFiltered(data);
     setPage(1);
-  }, [searchTerm, semesterFilter, subjects]);
+  }, [subjects, searchTerm, semesterFilter]);
 
-  // Pagination
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  // Delete subject
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this subject?")) return;
     try {
@@ -118,14 +92,13 @@ export default function SubjectTable({ refreshKey }) {
       toast.success(res.data?.message || "✅ Subject deleted");
       setSubjects(subjects.filter((s) => s._id !== id));
     } catch (err) {
-      console.error("Error deleting subject:", err);
+      console.error(err);
       toast.error(err.response?.data?.message || "❌ Failed to delete subject");
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Start editing
   const handleEdit = (subject) => {
     setEditId(subject._id);
     setEditData({
@@ -134,38 +107,29 @@ export default function SubjectTable({ refreshKey }) {
       semester: subject.semester,
     });
   };
+  const handleCancel = () => setEditId(null);
 
-  // Cancel editing
-  const handleCancel = () => {
-    setEditId(null);
-    setEditData({ code: "", name: "", semester: "" });
-  };
-
-  // Save update
   const handleSave = async (id) => {
     try {
       setActionLoading(true);
       const token = await getToken();
-
       const updatedData = {
         code: editData.code.toUpperCase(),
         name: editData.name.toUpperCase(),
-        semester: editData.semester,
+        semester: Number(editData.semester),
       };
-
       const res = await axios.put(
         `${process.env.NEXT_PUBLIC_API_URL}/api/subjects/updatesubject/${id}`,
         updatedData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       toast.success(res.data?.message || "✅ Subject updated");
       setSubjects(
         subjects.map((s) => (s._id === id ? { ...s, ...updatedData } : s))
       );
       setEditId(null);
     } catch (err) {
-      console.error("Error updating subject:", err);
+      console.error(err);
       toast.error(err.response?.data?.message || "❌ Failed to update subject");
     } finally {
       setActionLoading(false);
@@ -175,32 +139,30 @@ export default function SubjectTable({ refreshKey }) {
   return (
     <div className="rounded-lg p-4 shadow-sm bg-white text-sm">
       {actionLoading && <LoaderOverlay message="Processing..." />}
-
       <h2 className="text-lg font-semibold mb-3">Subjects</h2>
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search by code or name..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="border px-2 py-1 rounded mb-3 w-full md:w-1/3"
-      />
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Search by code or name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border px-2 py-1 rounded w-full md:w-1/3"
+        />
+        <select
+          value={semesterFilter}
+          onChange={(e) => setSemesterFilter(e.target.value)}
+          className="border px-2 py-1 rounded w-full md:w-1/4"
+        >
+          <option value="">All Semesters</option>
+          {[1, 2, 3, 4, 5, 6].map((sem) => (
+            <option key={sem} value={sem}>
+              {sem}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <select
-        value={semesterFilter}
-        onChange={(e) => setSemesterFilter(e.target.value)}
-        className="border px-2 py-1 ml-5 rounded w-full md:w-1/4"
-      >
-        <option value="">All Semesters</option>
-        {[1, 2, 3, 4, 5, 6].map((sem) => (
-          <option key={sem} value={sem}>
-            {sem}
-          </option>
-        ))}
-      </select>
-
-      {/* Table */}
       {loading ? (
         <p className="text-gray-500 text-center py-4">Loading subjects...</p>
       ) : (
@@ -218,8 +180,6 @@ export default function SubjectTable({ refreshKey }) {
             {paginated.map((s, idx) => (
               <tr key={s._id} className="border-t">
                 <td className="p-2">{(page - 1) * pageSize + idx + 1}</td>
-
-                {/* Code */}
                 <td className="p-2">
                   {editId === s._id ? (
                     <input
@@ -233,8 +193,6 @@ export default function SubjectTable({ refreshKey }) {
                     s.code
                   )}
                 </td>
-
-                {/* Name */}
                 <td className="p-2">
                   {editId === s._id ? (
                     <input
@@ -248,11 +206,10 @@ export default function SubjectTable({ refreshKey }) {
                     s.name
                   )}
                 </td>
-
-                {/* Semester */}
                 <td className="p-2">
                   {editId === s._id ? (
                     <input
+                      type="number"
                       value={editData.semester}
                       onChange={(e) =>
                         setEditData({ ...editData, semester: e.target.value })
@@ -264,7 +221,6 @@ export default function SubjectTable({ refreshKey }) {
                   )}
                 </td>
 
-                {/* Actions */}
                 <td className="p-2 flex gap-2">
                   {editId === s._id ? (
                     <>
@@ -300,10 +256,9 @@ export default function SubjectTable({ refreshKey }) {
                 </td>
               </tr>
             ))}
-
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
+                <td colSpan={6} className="p-4 text-center text-gray-500">
                   No subjects found
                 </td>
               </tr>
@@ -312,7 +267,6 @@ export default function SubjectTable({ refreshKey }) {
         </table>
       )}
 
-      {/* Pagination */}
       <div className="flex justify-center items-center gap-2 mt-3 text-sm">
         <button
           disabled={page === 1}

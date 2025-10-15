@@ -3,50 +3,47 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs"; // ✅ added useUser
 import { toast } from "sonner";
-import { Pencil, Trash2, Save, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import LoaderOverlay from "../LoaderOverlay";
-import Link from "next/link";
 
 export default function AttendanceSessionTable({ refreshKey }) {
   const { getToken } = useAuth();
-
-  const [sessions, setSessions] = useState([]);
   const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   // controls
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [page, setPage] = useState(1);
   const pageSize = 6;
-
   // inline edit state
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
-
   const [action, setAction] = useState(null); // "deleting" | "updating"
+  const { user } = useUser();
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchSessions = async () => {
     try {
       setLoading(true);
       const token = await getToken();
+
+      // ✅ restrict to HOD department
+      const isHOD = user?.publicMetadata?.role === "hod";
+      const department = user?.publicMetadata?.department;
+
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/attendance/sessions`,
         {
           headers: { Authorization: `Bearer ${token}` },
+          params: department ? { department } : {}, // <-- pass department filter
         }
       );
-      // res.data.data expected
-      const arr = res.data.data || res.data || [];
-      // sort by date & time for deterministic order
-      arr.sort((a, b) => {
-        const da = new Date(a.date + " " + (a.timeSlot || ""));
-        const db = new Date(b.date + " " + (b.timeSlot || ""));
-        return da - db;
-      });
+
+      const arr = res.data.data || [];
+      arr.sort((a, b) => new Date(a.date) - new Date(b.date));
       setSessions(arr);
     } catch (err) {
       console.error("Error fetching sessions:", err);
@@ -198,17 +195,32 @@ export default function AttendanceSessionTable({ refreshKey }) {
             onChange={(e) => setSearch(e.target.value)}
             className="border px-2 py-1 rounded w-56 text-sm"
           />
-          <select
-            className="border px-2 py-1 rounded text-sm"
-            value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-          >
-            {departments.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
+          {user?.publicMetadata?.role === "admin" ? (
+            // Admin can pick any department
+            <select
+              className="border px-2 py-1 rounded text-sm"
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+            >
+              {departments.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            // HOD or others see their department frozen (no dropdown)
+            <input
+              type="text"
+              value={
+                departments.find(
+                  (d) => d.value === user?.publicMetadata?.department
+                )?.label || "Department"
+              }
+              disabled
+              className="border px-2 py-1 rounded text-sm bg-gray-100 text-gray-700"
+            />
+          )}
 
           <select
             className="border px-2 py-1 rounded text-sm"

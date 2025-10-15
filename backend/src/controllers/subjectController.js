@@ -3,16 +3,28 @@ import Subject from "../models/Subject.js";
 // ✅ Create Subject
 export const createSubject = async (req, res) => {
   try {
-    const { code, name, semester, departments } = req.body;
+    const { code, name, semester, department } = req.body;
 
-    const existing = await Subject.findOne({ code });
+    // Check if the subject code already exists for the same department
+    const existing = await Subject.findOne({
+      code: code.toUpperCase(),
+      department: department.toLowerCase(),
+    });
+
     if (existing) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Subject code already exists" });
+      return res.status(400).json({
+        success: false,
+        message: `Subject code "${code}" already exists for department "${department}"`,
+      });
     }
 
-    const subject = await Subject.create({ code, name, semester, departments });
+    const subject = await Subject.create({
+      code: code.toUpperCase(),
+      name,
+      semester,
+      department: department.toLowerCase(),
+    });
+
     res.status(201).json({
       success: true,
       data: subject,
@@ -23,20 +35,24 @@ export const createSubject = async (req, res) => {
   }
 };
 
-// ✅ Get all Subjects (with optional department filter)
 // ✅ Get all Subjects (with optional department + semester filter)
 export const getSubjects = async (req, res) => {
   try {
-    const { department, semester } = req.query;
+    const { role, department: hodDept } = req.user?.publicMetadata || {};
     let filter = {};
 
-    if (department) {
-      // match department inside departments array
-      filter.departments = department.toUpperCase();
+    // If HOD, restrict to their department (except Science)
+    if (role === "hod" && hodDept && hodDept.toLowerCase() !== "sc") {
+      filter.department = hodDept.toLowerCase();
     }
 
-    if (semester) {
-      filter.semester = Number(semester); // ensure numeric comparison
+    // Optional query filtering
+    if (req.query.department) {
+      filter.department = req.query.department.toLowerCase();
+    }
+
+    if (req.query.semester) {
+      filter.semester = Number(req.query.semester);
     }
 
     const subjects = await Subject.find(filter).sort({ semester: 1, code: 1 });
@@ -65,11 +81,16 @@ export const getSubjectById = async (req, res) => {
 export const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { code, name, semester, departments } = req.body;
+    const { code, name, semester, department } = req.body;
 
     const subject = await Subject.findByIdAndUpdate(
       id,
-      { code, name, semester, departments },
+      {
+        code: code.toUpperCase(),
+        name,
+        semester,
+        department: department.toLowerCase(),
+      },
       { new: true, runValidators: true }
     );
 

@@ -6,7 +6,6 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Upload, Image as ImageIcon } from "lucide-react";
 import LoaderOverlay from "../LoaderOverlay";
-import StudentTable from "./StudentTable";
 import BulkUpload from "./bulkupload/BulkUpload";
 
 const departments = [
@@ -27,6 +26,14 @@ const semesters = Array.from({ length: 6 }, (_, i) => ({
   label: `${i + 1}`,
 }));
 
+// ✅ Example batch options (you can customize)
+const batches = [
+  { value: "B1", label: "B1" },
+  { value: "B2", label: "B2" },
+  { value: "B3", label: "B3" },
+  { value: "B4", label: "B4" },
+];
+
 export default function StudentForm() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -43,6 +50,7 @@ export default function StudentForm() {
     phone: "",
     department: hodDepartment || "",
     semester: "",
+    batch: "", // new batch field
     role: "student",
     image: null,
   });
@@ -68,13 +76,9 @@ export default function StudentForm() {
     setStatus("saving");
 
     try {
-      // 🔹 Transform form fields to uppercase except email
       const transformedForm = Object.fromEntries(
         Object.entries(form).map(([key, value]) => {
-          if (
-            typeof value === "string" &&
-            key !== "email" // keep email as is
-          ) {
+          if (typeof value === "string" && key !== "email") {
             return [key, value.toUpperCase()];
           }
           return [key, value];
@@ -86,7 +90,7 @@ export default function StudentForm() {
         if (value) formData.append(key, value);
       });
 
-      // 🔹 Force department for HODs
+      // Force department for HODs
       if (role === "hod") {
         formData.set("department", hodDepartment);
       }
@@ -111,6 +115,7 @@ export default function StudentForm() {
         phone: "",
         department: hodDepartment || "",
         semester: "",
+        batch: "",
         role: "student",
         image: null,
       });
@@ -143,6 +148,7 @@ export default function StudentForm() {
             <h3 className="text-2xl font-semibold mb-4 text-blue-600">
               Add Individual Student
             </h3>
+
             <input
               name="registerNumber"
               value={form.registerNumber}
@@ -220,6 +226,22 @@ export default function StudentForm() {
               {semesters.map((sem) => (
                 <option key={sem.value} value={sem.value}>
                   {sem.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Batch field */}
+            <select
+              name="batch"
+              value={form.batch}
+              onChange={handleChange}
+              required
+              className="block w-full rounded-md border px-3 py-2"
+            >
+              <option value="">Select a batch</option>
+              {batches.map((b) => (
+                <option key={b.value} value={b.value}>
+                  {b.label}
                 </option>
               ))}
             </select>

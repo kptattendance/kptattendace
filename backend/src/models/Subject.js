@@ -5,7 +5,6 @@ const subjectSchema = new mongoose.Schema(
     code: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       uppercase: true,
     },
@@ -18,18 +17,18 @@ const subjectSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
-      max: 8, // assuming 8 semesters
+      max: 8,
     },
-    departments: [
-      {
-        type: String, // e.g. "cs", "ec", "me"
-        required: true,
-        trim: true,
-        uppercase: true,
-      },
-    ],
+    department: {
+      type: String,
+      required: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
+
+// ✅ Composite unique constraint
+subjectSchema.index({ code: 1, department: 1 }, { unique: true });
 
 export default mongoose.model("Subject", subjectSchema);

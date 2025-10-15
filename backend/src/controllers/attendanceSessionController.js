@@ -72,14 +72,26 @@ export const createSession = async (req, res) => {
 // ✅ Get all sessions (with optional filters)
 export const getSessions = async (req, res) => {
   try {
-    const { date, subjectId, lecturerId, semester, department } = req.query;
+    const { date, subjectId, lecturerId, semester } = req.query;
 
     const filter = {};
     if (date) filter.date = date;
     if (subjectId) filter.subjectId = subjectId;
     if (lecturerId) filter.lecturerId = lecturerId;
     if (semester) filter.semester = semester;
-    if (department) filter.department = department;
+
+    // ✅ Secure department filtering
+    const userDept = req.auth?.claims?.metadata?.department;
+    const queryDept = req.query.department;
+
+    if (userDept) {
+      filter.department = userDept;
+    } else if (queryDept && queryDept !== "all") {
+      filter.department = queryDept;
+    }
+    if (req.query.department && req.query.department !== "all") {
+      filter.department = req.query.department;
+    }
 
     const sessions = await AttendanceSession.find(filter)
       .populate("subjectId", "code name")

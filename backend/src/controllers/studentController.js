@@ -430,7 +430,7 @@ export const searchStudents = async (req, res) => {
     if (registerNumber) filter.registerNumber = registerNumber;
     if (batch) filter.batch = batch;
     const students = await Student.find(filter).select(
-      "name registerNumber department semester batch  _id clerkId"
+      "name registerNumber department semester batch  _id clerkId imageUrl"
     );
     res.json(students);
   } catch (err) {

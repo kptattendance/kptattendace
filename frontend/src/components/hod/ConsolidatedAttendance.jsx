@@ -29,14 +29,6 @@ const toNum = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/**
- * ConsolidatedAttendance
- *
- * - Uses: /api/subjects/getsubjects and /api/statistics/subject-wise
- * - Fetches subjects for selected dept+semester then fetches subject-wise stats for each subject
- * - Computes per-subject per-student attended/held hours (batch-aware)
- * - Aggregates per-student across subjects and renders grouped table + Excel exports
- */
 export default function ConsolidatedAttendance({ dept = "Your Department" }) {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -50,9 +42,7 @@ export default function ConsolidatedAttendance({ dept = "Your Department" }) {
   const [subjectsLoading, setSubjectsLoading] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  // groupedByYear: { "1st Year": [studentObjects...] }
   const [groupedByYear, setGroupedByYear] = useState({});
-  // subjectMetaByYear: { "1st Year": { subjectName: { totalHours, batchTotals } } }
   const [subjectMetaByYear, setSubjectMetaByYear] = useState({});
 
   const myRole = user?.publicMetadata?.role;
@@ -65,7 +55,6 @@ export default function ConsolidatedAttendance({ dept = "Your Department" }) {
     }
   }, [myRole, myDept]);
 
-  // Load subjects when department + semester selected
   useEffect(() => {
     const loadSubjects = async () => {
       if (!filters.department || !filters.semester) {
@@ -97,7 +86,6 @@ export default function ConsolidatedAttendance({ dept = "Your Department" }) {
     loadSubjects();
   }, [filters.department, filters.semester, getToken]);
 
-  // MAIN: fetch per-subject stats and build consolidated view
   const fetchConsolidated = async () => {
     if (!filters.department || !filters.semester) {
       toast.error("Please select department & semester");

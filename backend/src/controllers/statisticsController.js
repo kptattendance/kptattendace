@@ -38,17 +38,19 @@ export const getSubjectWiseAttendanceDetails = async (req, res) => {
 
     const sessionIds = sessions.map((s) => s._id);
 
-    // 2️⃣ Students in dept + sem (include batch)
     const students = await Student.find({
       department: department.toLowerCase(),
       semester: Number(semester),
-    }).select("_id name registerNumber batch");
+    }).select("_id name registerNumber batch phone imageUrl");
 
     // 3️⃣ Attendance records for these sessions
     const records = await AttendanceRecord.find({
       sessionId: { $in: sessionIds },
     })
-      .populate("studentId", "name phone registerNumber")
+      .populate(
+        "studentId",
+        "registerNumber name phone imageUrl batch department semester"
+      )
       .populate("sessionId", "date batch timeSlot duration");
 
     // 4️⃣ Build student → session history
@@ -58,8 +60,10 @@ export const getSubjectWiseAttendanceDetails = async (req, res) => {
         _id: st._id,
         name: st.name,
         registerNumber: st.registerNumber,
-        batch: normalizeBatch(st.batch), // ✅ batch included here
-        sessions: [], // { date, timeSlot, status }
+        phone: st.phone || "",
+        imageUrl: st.imageUrl || "",
+        batch: normalizeBatch(st.batch),
+        sessions: [],
       };
     });
 

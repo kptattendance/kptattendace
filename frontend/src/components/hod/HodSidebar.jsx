@@ -42,6 +42,11 @@ export default function HodSidebar({ selected, setSelected }) {
   const menu = [
     { id: "mark-attendance", label: "Mark Attendance", Icon: CheckCircle },
     {
+      id: "subject-attendance",
+      label: "Subject Attendance",
+      Icon: CheckCircle,
+    },
+    {
       id: "consolidated-attendance",
       label: "Consolidated Attendance",
       Icon: PieChart,
