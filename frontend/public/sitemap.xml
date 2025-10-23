@@ -1,4 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<sitemap><loc>https://kptattendance.vercel.app/sitemap.xml</loc></sitemap>
-</sitemapindex>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- 🏠 Home Page -->
+  <url>
+    <loc>https://kptattendance.vercel.app/</loc>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- 📘 About Section -->
+  <url>
+    <loc>https://kptattendance.vercel.app/#about</loc>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- 👨‍🏫 Departments Section -->
+  <url>
+    <loc>https://kptattendance.vercel.app/#departments</loc>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 👩‍🎓 Students Section -->
+  <url>
+    <loc>https://kptattendance.vercel.app/#students</loc>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 🧑‍🏫 Faculty Section -->
+  <url>
+    <loc>https://kptattendance.vercel.app/#faculty</loc>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 🧾 Contact Section -->
+  <url>
+    <loc>https://kptattendance.vercel.app/#contact</loc>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 🔒 Login Page -->
+  <url>
+    <loc>https://kptattendance.vercel.app/login</loc>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- 👤 Register Page -->
+  <url>
+    <loc>https://kptattendance.vercel.app/register</loc>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- 🧾 Admin Dashboard (restricted) -->
+  <url>
+    <loc>https://kptattendance.vercel.app/admin</loc>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- 🎓 Student Dashboard (restricted) -->
+  <url>
+    <loc>https://kptattendance.vercel.app/dashboard</loc>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>
