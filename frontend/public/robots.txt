@@ -1,6 +1,11 @@
-# *
+# ----------------------------------------
+# Robots.txt for KPT Attendance Portal
+# ----------------------------------------
+
 User-agent: *
 Allow: /
+
+# Disallow restricted pages
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /login
@@ -13,5 +18,5 @@ Disallow: /profile
 # Host
 Host: https://kptattendance.vercel.app
 
-# Sitemaps
+# Sitemap
 Sitemap: https://kptattendance.vercel.app/sitemap.xml
